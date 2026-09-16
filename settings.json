@@ -1,0 +1,21 @@
+{
+    "sqltools.connections": [
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 3306,
+            "driver": "MySQL",
+            "name": "new connection",
+            "database": "face_recognition",
+            "username": "root"
+        }
+    ],
+    "python.pythonPath": "c:\\Users\\Muhammad Waseem\\myPython\\Scripts\\python.exe",
+    "cSpell.words": [
+        "LANCZOS"
+    ]
+}

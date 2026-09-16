@@ -1,0 +1,24 @@
+# Local Python virtual environment
+venv/
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Face dataset / training images
+dataset/
+data_img/
+
+# Generated face-recognition model
+clf.xml
+
+# Runtime attendance/data files
+attendance.csv
+
+# Logs
+attendance_error_log.txt
+face_recognition.log
+face_recognition_log.txt
+tempCodeRunnerFile.py
