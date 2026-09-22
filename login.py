@@ -10,87 +10,337 @@ pymysql.install_as_MySQLdb()
 # --------------------------
 from train import Train
 from student import Student
-from train import Train
 from face_recognition import Face_Recognition
 from attendance import Attendance
 from developer import Developer
 from helpsupport import Helpsupport
 from db_config import DB_CONFIG
+from main import Face_Recognition_System
 import os
+import json
+from Session_utils import save_session, load_session, clear_session
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 IMAGE_DIR = os.path.join(BASE_DIR, "Images_GUI")
 
 class Login:
-    def __init__(self,root):
-        self.root=root
-        self.root.title("Login")
-        self.root.geometry("1366x768+0+0")
+    def __init__(self, root):
+        self.root = root
 
-        # variables 
-        self.var_ssq=StringVar()
-        self.var_sa=StringVar()
-        self.var_pwd=StringVar()
+        # -------------------- Remember-me auto login --------------------
+        # If a valid remembered session exists, skip the login form entirely
+        # and go straight to the dashboard on this same root window.
+        if self.try_auto_login():
+            return
 
-        self.bg = ImageTk.PhotoImage(file=os.path.join(IMAGE_DIR, "loginBg1.jpg"))
-        
-        lb1_bg=Label(self.root,image=self.bg)
-        lb1_bg.place(x=0,y=0, relwidth=1,relheight=1)
+        self.root.title("Login • Face Recognition Attendance System")
+        self.root.minsize(920, 620)
+        self.set_auth_window_state()
+        self.root.configure(bg="#F7F9FC")
 
-        frame1= Frame(self.root,bg="#002B53")
-        frame1.place(x=500,y=170,width=340,height=450)
+        # -------------------- Variables --------------------
+        self.var_ssq = StringVar()
+        self.var_sa = StringVar()
+        self.var_pwd = StringVar()
+        self.var_remember = BooleanVar(value=False)
 
-        img1 = Image.open(os.path.join(IMAGE_DIR, "log1.png"))
-        img1=img1.resize((100,100), Image.LANCZOS)
-        self.photoimage1=ImageTk.PhotoImage(img1)
-        lb1img1 = Label(image=self.photoimage1,bg="#002B53")
-        lb1img1.place(x=630,y=175, width=100,height=100)
+        # -------------------- Theme --------------------
+        WHITE = "#FFFFFF"
+        BG = "#F7F9FC"
+        BLUE = "#2563EB"
+        BLUE_DARK = "#172554"
+        BLUE_SOFT = "#EFF6FF"
+        PINK = "#EC4899"
+        PINK_SOFT = "#FDF2F8"
+        TEXT = "#1E293B"
+        MUTED = "#64748B"
+        BORDER = "#E2E8F0"
 
-        get_str = Label(frame1,text="Login",font=("times new roman",20,"bold"),fg="white",bg="#002B53")
-        get_str.place(x=140,y=100)
+        style = ttk.Style(self.root)
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
 
-        #label1 
-        username =lb1= Label(frame1,text="Email:",font=("times new roman",15,"bold"),fg="white",bg="#002B53")
-        username.place(x=30,y=160)
+        style.configure(
+            "Auth.TEntry",
+            fieldbackground=WHITE,
+            background=WHITE,
+            foreground=TEXT,
+            bordercolor=BORDER,
+            lightcolor=BORDER,
+            darkcolor=BORDER,
+            padding=(12, 10),
+            font=("Segoe UI", 11),
+        )
+        style.map(
+            "Auth.TEntry",
+            bordercolor=[("focus", BLUE)],
+            lightcolor=[("focus", BLUE)],
+            darkcolor=[("focus", BLUE)],
+        )
 
-        #entry1 
-        self.txtuser=ttk.Entry(frame1,font=("times new roman",15,"bold"))
-        self.txtuser.place(x=33,y=190,width=270)
+        style.configure(
+            "Auth.Primary.TButton",
+            background=BLUE,
+            foreground=WHITE,
+            relief="flat",
+            borderwidth=0,
+            padding=(14, 11),
+            font=("Segoe UI", 10, "bold"),
+        )
+        style.map(
+            "Auth.Primary.TButton",
+            background=[("active", "#1D4ED8"), ("pressed", "#1E40AF")],
+        )
 
+        style.configure(
+            "Auth.Secondary.TButton",
+            background=WHITE,
+            foreground=BLUE,
+            relief="flat",
+            borderwidth=1,
+            bordercolor=BORDER,
+            padding=(14, 10),
+            font=("Segoe UI", 10, "bold"),
+        )
+        style.map(
+            "Auth.Secondary.TButton",
+            background=[("active", BLUE_SOFT), ("pressed", "#DBEAFE")],
+            bordercolor=[("focus", BLUE)],
+        )
 
-        #label2 
-        pwd =lb1= Label(frame1,text="Password:",font=("times new roman",15,"bold"),fg="white",bg="#002B53")
-        pwd.place(x=30,y=230)
+        style.configure(
+            "Auth.TCheckbutton",
+            background=WHITE,
+            foreground=TEXT,
+            font=("Segoe UI", 9),
+        )
+        style.map(
+            "Auth.TCheckbutton",
+            background=[("active", WHITE)],
+        )
 
-        #entry2 
-        self.txtpwd=ttk.Entry(frame1,font=("times new roman",15,"bold"), show="*")  # Added show="*" to hide password
-        self.txtpwd.place(x=33,y=260,width=270)
+        # -------------------- Responsive root --------------------
+        # Clear the dashboard's two-column grid before rebuilding login in
+        # the same root window after logout.
+        for column in range(2):
+            self.root.grid_columnconfigure(column, weight=0)
+        for row in range(2):
+            self.root.grid_rowconfigure(row, weight=0)
+        self.root.grid_rowconfigure(0, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
 
-        # Email validation status
-        self.email_status = Label(frame1, text="", font=("times new roman", 10), fg="white", bg="#002B53")
-        self.email_status.place(x=33, y=215, width=270)
+        shell = Frame(self.root, bg=BG)
+        shell.grid(row=0, column=0, sticky="nsew", padx=24, pady=24)
+        shell.grid_rowconfigure(0, weight=1)
+        shell.grid_columnconfigure(0, weight=11)
+        shell.grid_columnconfigure(1, weight=9)
 
-        # Password validation status
-        self.pwd_status = Label(frame1, text="", font=("times new roman", 10), fg="white", bg="#002B53")
-        self.pwd_status.place(x=33, y=285, width=270)
+        # -------------------- Brand / visual panel --------------------
+        visual = Frame(shell, bg=BLUE_DARK)
+        visual.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
 
-        # Bind validation functions to entry field events
+        # Decorative pink / blue blocks
+        Frame(visual, bg=PINK, width=190, height=190).place(
+            relx=0.88, rely=-0.08, anchor="ne"
+        )
+        Frame(visual, bg=BLUE, width=150, height=150).place(
+            relx=-0.05, rely=0.88, anchor="sw"
+        )
+        Frame(visual, bg="#60A5FA", width=90, height=90).place(
+            relx=0.12, rely=0.10
+        )
+        Frame(visual, bg="#F9A8D4", width=70, height=70).place(
+            relx=0.78, rely=0.78
+        )
+
+        visual_content = Frame(visual, bg=BLUE_DARK)
+        visual_content.place(relx=0.11, rely=0.16, relwidth=0.78, relheight=0.68)
+
+        Label(
+            visual_content,
+            text="FACE RECOGNITION",
+            bg=BLUE_DARK,
+            fg="#BFDBFE",
+            font=("Segoe UI", 11, "bold"),
+        ).pack(anchor="w")
+
+        Label(
+            visual_content,
+            text="Attendance\nSystem",
+            bg=BLUE_DARK,
+            fg=WHITE,
+            font=("Segoe UI", 34, "bold"),
+            justify="left",
+        ).pack(anchor="w", pady=(10, 8))
+
+        Label(
+            visual_content,
+            text="Smart student management,\nface recognition and attendance tracking.",
+            bg=BLUE_DARK,
+            fg="#CBD5E1",
+            font=("Segoe UI", 12),
+            justify="left",
+        ).pack(anchor="w")
+
+        feature = Frame(visual_content, bg="#1E3A8A")
+        feature.pack(fill="x", pady=(40, 0))
+
+        Label(
+            feature,
+            text="SECURE  •  SIMPLE  •  CONNECTED",
+            bg="#1E3A8A",
+            fg="#DBEAFE",
+            font=("Segoe UI", 9, "bold"),
+            padx=16,
+            pady=12,
+        ).pack(anchor="w")
+
+        Label(
+            visual_content,
+            text="Face Recognition Attendance System",
+            bg=BLUE_DARK,
+            fg="#93C5FD",
+            font=("Segoe UI", 9),
+        ).pack(anchor="w", side="bottom", pady=(18, 0))
+
+        # -------------------- Login card --------------------
+        card_wrap = Frame(shell, bg=BG)
+        card_wrap.grid(row=0, column=1, sticky="nsew")
+        card_wrap.grid_rowconfigure(0, weight=1)
+        card_wrap.grid_columnconfigure(0, weight=1)
+
+        card = Frame(
+            card_wrap,
+            bg=WHITE,
+            bd=0,
+            highlightthickness=1,
+            highlightbackground=BORDER,
+        )
+        card.grid(row=0, column=0, sticky="nsew", padx=(12, 0), pady=30)
+        card.grid_columnconfigure(0, weight=1)
+
+        # Pink accent
+        Frame(card, bg=PINK, height=5).grid(
+            row=0, column=0, sticky="ew"
+        )
+
+        content = Frame(card, bg=WHITE)
+        content.grid(row=1, column=0, sticky="nsew", padx=54, pady=48)
+        content.grid_columnconfigure(0, weight=1)
+
+        Label(
+            content,
+            text="Welcome back",
+            bg=WHITE,
+            fg=BLUE_DARK,
+            font=("Segoe UI", 28, "bold"),
+        ).grid(row=0, column=0, sticky="w")
+
+        Label(
+            content,
+            text="Sign in to continue to the attendance system",
+            bg=WHITE,
+            fg=MUTED,
+            font=("Segoe UI", 10),
+        ).grid(row=1, column=0, sticky="w", pady=(6, 34))
+
+        Label(
+            content,
+            text="EMAIL",
+            bg=WHITE,
+            fg=TEXT,
+            font=("Segoe UI", 9, "bold"),
+        ).grid(row=2, column=0, sticky="w", pady=(0, 6))
+
+        self.txtuser = ttk.Entry(content, style="Auth.TEntry")
+        self.txtuser.grid(row=3, column=0, sticky="ew")
+
+        self.email_status = Label(
+            content,
+            text="",
+            font=("Segoe UI", 9),
+            fg=PINK,
+            bg=WHITE,
+        )
+        self.email_status.grid(row=4, column=0, sticky="w", pady=(5, 16))
+
+        Label(
+            content,
+            text="PASSWORD",
+            bg=WHITE,
+            fg=TEXT,
+            font=("Segoe UI", 9, "bold"),
+        ).grid(row=5, column=0, sticky="w", pady=(0, 6))
+
+        self.txtpwd = ttk.Entry(content, style="Auth.TEntry", show="*")
+        self.txtpwd.grid(row=6, column=0, sticky="ew")
+
+        self.pwd_status = Label(
+            content,
+            text="",
+            font=("Segoe UI", 9),
+            fg=PINK,
+            bg=WHITE,
+        )
+        self.pwd_status.grid(row=7, column=0, sticky="w", pady=(5, 14))
+
+        ttk.Checkbutton(
+            content,
+            text="Keep me signed in",
+            variable=self.var_remember,
+            style="Auth.TCheckbutton",
+        ).grid(row=8, column=0, sticky="w", pady=(0, 12))
+
+        ttk.Button(
+            content,
+            text="Sign In",
+            command=self.login,
+            style="Auth.Primary.TButton",
+        ).grid(row=9, column=0, sticky="ew", pady=(6, 10))
+
+        actions = Frame(content, bg=WHITE)
+        actions.grid(row=10, column=0, sticky="ew", pady=(8, 0))
+        actions.grid_columnconfigure(0, weight=1)
+        actions.grid_columnconfigure(1, weight=1)
+
+        ttk.Button(
+            actions,
+            text="Create account",
+            command=self.reg,
+            style="Auth.Secondary.TButton",
+        ).grid(row=0, column=0, sticky="ew", padx=(0, 5))
+
+        ttk.Button(
+            actions,
+            text="Forgot password?",
+            command=self.forget_pwd,
+            style="Auth.Secondary.TButton",
+        ).grid(row=0, column=1, sticky="ew", padx=(5, 0))
+
+        Label(
+            content,
+            text="Your account credentials are used only for this application.",
+            bg=WHITE,
+            fg=MUTED,
+            font=("Segoe UI", 8),
+            wraplength=420,
+            justify="left",
+        ).grid(row=11, column=0, sticky="w", pady=(24, 0))
+
+        # Preserve existing validation callbacks.
         self.txtuser.bind("<FocusOut>", self.validate_email)
         self.txtpwd.bind("<FocusOut>", self.validate_password)
 
-
-        # Creating Button Login
-        loginbtn=Button(frame1,command=self.login,text="Login",font=("times new roman",15,"bold"),bd=0,relief=RIDGE,fg="#002B53",bg="white",activeforeground="white",activebackground="#007ACC")
-        loginbtn.place(x=33,y=320,width=270,height=35)
-
-
-        # Creating Button Registration
-        loginbtn=Button(frame1,command=self.reg,text="Register",font=("times new roman",10,"bold"),bd=0,relief=RIDGE,fg="white",bg="#002B53",activeforeground="orange",activebackground="#002B53")
-        loginbtn.place(x=33,y=370,width=50,height=20)
-
-
-        # Creating Button Forget
-        loginbtn=Button(frame1,command=self.forget_pwd,text="Forget",font=("times new roman",10,"bold"),bd=0,relief=RIDGE,fg="white",bg="#002B53",activeforeground="orange",activebackground="#002B53")
-        loginbtn.place(x=90,y=370,width=50,height=20)
+    def set_auth_window_state(self):
+        self.root.update_idletasks()
+        try:
+            self.root.state("normal")
+            self.root.state("zoomed")
+        except Exception:
+            screen_w = self.root.winfo_screenwidth()
+            screen_h = self.root.winfo_screenheight()
+            self.root.geometry(f"{screen_w}x{screen_h}+0+0")
 
     # Validate email format
     def validate_email(self, event=None):
@@ -161,11 +411,16 @@ class Login:
             messagebox.showerror("Error","All Fields Required!")
         elif(self.txtuser.get()=="admin" and self.txtpwd.get()=="admin"):
             messagebox.showinfo("Successfully","Welcome to Attendance Management System Using Facial Recognition")
+            if self.var_remember.get():
+                save_session(self.txtuser.get())
+            else:
+                clear_session()
+            self.open_dashboard("admin", "Admin")
         else:
             # messagebox.showerror("Error","Please Check Username or Password !")
             conn = mysql.connector.connect(**DB_CONFIG)
             mycursor = conn.cursor()
-            mycursor.execute("select * from regteach where email=%s and pwd=%s",(
+            mycursor.execute("select * from regteach where BINARY email = BINARY %s and BINARY pwd = BINARY %s",(
                 self.txtuser.get(),
                 self.txtpwd.get()
             ))
@@ -175,13 +430,66 @@ class Login:
             else:
                 open_min=messagebox.askyesno("YesNo","Access only Admin")
                 if open_min>0:
-                    self.new_window=Toplevel(self.root)
-                    self.app=Face_Recognition_System(self.new_window)
+                    if self.var_remember.get():
+                        save_session(self.txtuser.get())
+                    else:
+                        clear_session()
+                    self.open_dashboard(
+                        self.txtuser.get(),
+                        f"{row[0]} {row[1]}".strip(),
+                    )
                 else:
                     if not open_min:
                         return
                 conn.commit()
                 conn.close()
+
+    # -------------------- Remember-me helpers --------------------
+    def open_dashboard(self, user_email, user_name):
+        """Swap this window's content from the login form to the
+        dashboard, reusing the same window (mirrors main.py's logout)."""
+        for widget in self.root.winfo_children():
+            widget.destroy()
+        self.app = Face_Recognition_System(
+            self.root,
+            authenticated=True,
+            user_email=user_email,
+            user_name=user_name,
+        )
+
+    def try_auto_login(self):
+        """If a remembered session exists and is still valid, open the
+        dashboard directly on this root window and return True."""
+        email = load_session()
+        if not email:
+            return False
+        try:
+            if email == "admin":
+                self.app = Face_Recognition_System(
+                    self.root, authenticated=True,
+                    user_email="admin", user_name="Admin")
+                return True
+
+            conn = mysql.connector.connect(**DB_CONFIG)
+            mycursor = conn.cursor()
+            mycursor.execute("select * from regteach where BINARY email = BINARY %s", (email,))
+            row = mycursor.fetchone()
+            conn.close()
+
+            if row is None:
+                clear_session()
+                return False
+
+            self.app = Face_Recognition_System(
+                self.root,
+                authenticated=True,
+                user_email=email,
+                user_name=f"{row[0]} {row[1]}".strip(),
+            )
+            return True
+        except Exception:
+            clear_session()
+            return False
 #=======================Reset Password Function=============================
     def reset_pass(self):
         # Validate new password
@@ -209,14 +517,14 @@ class Login:
         else:
             conn = mysql.connector.connect(**DB_CONFIG)
             mycursor = conn.cursor()
-            query=("select * from regteach where email=%s and ss_que=%s and s_ans=%s")
+            query=("select * from regteach where BINARY email = BINARY %s and BINARY ss_que = BINARY %s and BINARY s_ans = BINARY %s")
             value=(self.txtuser.get(),self.var_ssq.get(),self.var_sa.get())
             mycursor.execute(query,value)
             row=mycursor.fetchone()
             if row==None:
                 messagebox.showerror("Error","Please Enter the Correct Answer!",parent=self.root2)
             else:
-                query=("update regteach set pwd=%s where email=%s")
+                query=("update regteach set pwd=%s where BINARY email = BINARY %s")
                 value=(self.var_pwd.get(),self.txtuser.get())
                 mycursor.execute(query,value)
 
@@ -236,7 +544,7 @@ class Login:
         else:
             conn = mysql.connector.connect(**DB_CONFIG)
             mycursor = conn.cursor()
-            query=("select * from regteach where email=%s")
+            query=("select * from regteach where BINARY email = BINARY %s")
             value=(self.txtuser.get(),)
             mycursor.execute(query,value)
             row=mycursor.fetchone()
@@ -246,49 +554,104 @@ class Login:
             messagebox.showerror("Error","Please Enter the Valid Email ID!")
         else:
             conn.close()
-            self.root2=Toplevel()
-            self.root2.title("Forget Password")
-            self.root2.geometry("400x400+610+170")
-            l=Label(self.root2,text="Forget Password",font=("times new roman",30,"bold"),fg="#002B53",bg="#fff")
-            l.place(x=0,y=10,relwidth=1)
-            # -------------------fields-------------------
-            #label1 
-            ssq =lb1= Label(self.root2,text="Select Security Question:",font=("times new roman",15,"bold"),fg="#002B53",bg="#F2F2F2")
-            ssq.place(x=70,y=80)
+            self.root2 = Toplevel(self.root)
+            self.root2.title("Forgot Password • Face Recognition Attendance System")
+            self.root2.minsize(920, 620)
+            self.root2.configure(bg="#F7F9FC")
+            self.root2.grid_rowconfigure(0, weight=1)
+            self.root2.grid_columnconfigure(0, weight=11)
+            self.root2.grid_columnconfigure(1, weight=9)
 
-            #Combo Box1
-            self.combo_security = ttk.Combobox(self.root2,textvariable=self.var_ssq,font=("times new roman",15,"bold"),state="readonly")
-            self.combo_security["values"]=("Select","Your Date of Birth","Your Nick Name","Your Favorite Book")
+            WHITE = "#FFFFFF"
+            BG = "#F7F9FC"
+            BLUE = "#2563EB"
+            BLUE_DARK = "#172554"
+            BLUE_SOFT = "#EFF6FF"
+            PINK = "#EC4899"
+            TEXT = "#1E293B"
+            MUTED = "#64748B"
+            BORDER = "#E2E8F0"
+
+            visual = Frame(self.root2, bg=BLUE_DARK)
+            visual.grid(row=0, column=0, sticky="nsew", padx=(24, 12), pady=24)
+            Frame(visual, bg=PINK, width=190, height=190).place(relx=0.88, rely=-0.08, anchor="ne")
+            Frame(visual, bg=BLUE, width=150, height=150).place(relx=-0.05, rely=0.88, anchor="sw")
+            Frame(visual, bg="#60A5FA", width=90, height=90).place(relx=0.12, rely=0.10)
+            Frame(visual, bg="#F9A8D4", width=70, height=70).place(relx=0.78, rely=0.78)
+
+            visual_content = Frame(visual, bg=BLUE_DARK)
+            visual_content.place(relx=0.11, rely=0.16, relwidth=0.78, relheight=0.68)
+            Label(visual_content, text="FACE RECOGNITION", bg=BLUE_DARK, fg="#BFDBFE",
+                font=("Segoe UI", 11, "bold")).pack(anchor="w")
+            Label(visual_content, text="Attendance\nSystem", bg=BLUE_DARK, fg=WHITE,
+                font=("Segoe UI", 34, "bold"), justify="left").pack(anchor="w", pady=(10, 8))
+            Label(visual_content,
+                text="Smart student management,\nface recognition and attendance tracking.",
+                bg=BLUE_DARK, fg="#CBD5E1", font=("Segoe UI", 12),
+                justify="left").pack(anchor="w")
+            feature = Frame(visual_content, bg="#1E3A8A")
+            feature.pack(fill="x", pady=(40, 0))
+            Label(feature, text="SECURE  •  SIMPLE  •  CONNECTED", bg="#1E3A8A",
+                fg="#DBEAFE", font=("Segoe UI", 9, "bold"), padx=16, pady=12).pack(anchor="w")
+            Label(visual_content, text="Face Recognition Attendance System", bg=BLUE_DARK,
+                fg="#93C5FD", font=("Segoe UI", 9)).pack(anchor="w", side="bottom", pady=(18, 0))
+
+            card = Frame(self.root2, bg=WHITE, highlightthickness=1, highlightbackground=BORDER)
+            card.grid(row=0, column=1, sticky="nsew", padx=(12, 24), pady=24)
+            card.grid_columnconfigure(0, weight=1)
+            Frame(card, bg=PINK, height=5).grid(row=0, column=0, sticky="ew")
+
+            content = Frame(card, bg=WHITE)
+            content.grid(row=1, column=0, sticky="nsew", padx=54, pady=48)
+            content.grid_columnconfigure(0, weight=1)
+            Label(content, text="Reset your password", bg=WHITE, fg=BLUE_DARK,
+                font=("Segoe UI", 28, "bold")).grid(row=0, column=0, sticky="w")
+            Label(content, text="Verify your account and create a new password",
+                bg=WHITE, fg=MUTED, font=("Segoe UI", 10)).grid(row=1, column=0,
+                sticky="w", pady=(6, 34))
+
+            Label(content, text="SECURITY QUESTION", bg=WHITE, fg=TEXT,
+                font=("Segoe UI", 9, "bold")).grid(row=2, column=0, sticky="w", pady=(0, 6))
+            self.combo_security = ttk.Combobox(
+                content, textvariable=self.var_ssq,
+                values=("Select", "Your Date of Birth", "Your Nick Name", "Your Favorite Book"),
+                state="readonly", style="Auth.TEntry")
+            self.combo_security.grid(row=3, column=0, sticky="ew")
             self.combo_security.current(0)
-            self.combo_security.place(x=70,y=110,width=270)
 
+            Label(content, text="SECURITY ANSWER", bg=WHITE, fg=TEXT,
+                font=("Segoe UI", 9, "bold")).grid(row=4, column=0, sticky="w", pady=(18, 6))
+            self.reset_answer_entry = ttk.Entry(content, textvariable=self.var_sa, style="Auth.TEntry")
+            self.reset_answer_entry.grid(row=5, column=0, sticky="ew")
 
-            #label2 
-            sa =lb1= Label(self.root2,text="Security Answer:",font=("times new roman",15,"bold"),fg="#002B53",bg="#F2F2F2")
-            sa.place(x=70,y=150)
-
-            #entry2 
-            self.txtpwd=ttk.Entry(self.root2,textvariable=self.var_sa,font=("times new roman",15,"bold"))
-            self.txtpwd.place(x=70,y=180,width=270)
-
-            #label2 
-            new_pwd =lb1= Label(self.root2,text="New Password:",font=("times new roman",15,"bold"),fg="#002B53",bg="#F2F2F2")
-            new_pwd.place(x=70,y=220)
-
-            #entry2 
-            self.new_pwd=ttk.Entry(self.root2,textvariable=self.var_pwd,font=("times new roman",15,"bold"), show="*")
-            self.new_pwd.place(x=70,y=250,width=270)
-
-            # Password strength indicator
-            self.pwd_indicator = Label(self.root2, text="", font=("times new roman",10), fg="#002B53", bg="#F2F2F2")
-            self.pwd_indicator.place(x=70, y=280, width=270)
-            
-            # Bind password validation to the new password field
+            Label(content, text="NEW PASSWORD", bg=WHITE, fg=TEXT,
+                font=("Segoe UI", 9, "bold")).grid(row=6, column=0, sticky="w", pady=(18, 6))
+            self.new_pwd = ttk.Entry(content, textvariable=self.var_pwd, style="Auth.TEntry", show="*")
+            self.new_pwd.grid(row=7, column=0, sticky="ew")
+            self.pwd_indicator = Label(content, text="", font=("Segoe UI", 9),
+                               fg=MUTED, bg=WHITE)
+            self.pwd_indicator.grid(row=8, column=0, sticky="w", pady=(5, 14))
             self.new_pwd.bind("<KeyRelease>", self.check_password_strength)
 
-            # Creating Button New Password
-            loginbtn=Button(self.root2,command=self.reset_pass,text="Reset Password",font=("times new roman",15,"bold"),bd=0,relief=RIDGE,fg="#fff",bg="#002B53",activeforeground="white",activebackground="#007ACC")
-            loginbtn.place(x=70,y=320,width=270,height=35)
+            ttk.Button(content, command=self.reset_pass, text="Reset Password",
+                     style="Auth.Primary.TButton").grid(row=9, column=0, sticky="ew", pady=(6, 10))
+            ttk.Button(content, command=self.back_to_login, text="Back to login",
+                     style="Auth.Secondary.TButton").grid(row=10, column=0, sticky="ew")
+            self.root2.transient(self.root)
+            self.root2.grab_set()
+            self.root2.update_idletasks()
+            try:
+                self.root2.state("normal")
+                self.root2.state("zoomed")
+            except Exception:
+                self.root2.geometry(f"{self.root.winfo_width()}x{self.root.winfo_height()}+0+0")
+
+    def back_to_login(self):
+        if hasattr(self, "root2") and self.root2.winfo_exists():
+            self.root2.grab_release()
+            self.root2.destroy()
+        self.root.deiconify()
+        self.root.focus_force()
 
     # Check password strength for the reset password window
     def check_password_strength(self, event=None):
@@ -323,163 +686,6 @@ class Login:
             self.pwd_indicator.config(text="Fair password", fg="orange")
         else:
             self.pwd_indicator.config(text="Weak password", fg="red")
-            
-
-# =====================main program Face deteion system====================
-
-class Face_Recognition_System:
-    def __init__(self,root):
-        self.root=root
-        self.root.geometry("1366x768+0+0")
-        self.root.title("Face_Recogonition_System")
-
-# This part is image labels setting start 
-        # first header image  
-        img = Image.open(os.path.join(IMAGE_DIR, "banner.jpg"))
-        img=img.resize((1366,130),Image.LANCZOS)
-        self.photoimg=ImageTk.PhotoImage(img)
-
-        # set image as lable
-        f_lb1 = Label(self.root,image=self.photoimg)
-        f_lb1.place(x=0,y=0,width=1366,height=130)
-
-        # backgorund image 
-        bg1=Image.open(os.path.join(IMAGE_DIR, "bg3.jpg"))
-        bg1=bg1.resize((1366,768),Image.LANCZOS)
-        self.photobg1=ImageTk.PhotoImage(bg1)
-
-        # set image as lable
-        bg_img = Label(self.root,image=self.photobg1)
-        bg_img.place(x=0,y=130,width=1366,height=768)
-
-
-        #title section
-        title_lb1 = Label(bg_img,text="Attendance Managment System Using Facial Recognition",font=("verdana",30,"bold"),bg="white",fg="navyblue")
-        title_lb1.place(x=0,y=0,width=1366,height=45)
-
-        # Create buttons below the section 
-        # ------------------------------------------------------------------------------------------------------------------- 
-        # student button 1
-        std_img_btn = Image.open(os.path.join(IMAGE_DIR, "std1.jpg"))
-        std_img_btn=std_img_btn.resize((180,180),Image.LANCZOS)
-        self.std_img1=ImageTk.PhotoImage(std_img_btn)
-
-        std_b1 = Button(bg_img,command=self.student_pannels,image=self.std_img1,cursor="hand2")
-        std_b1.place(x=250,y=100,width=180,height=180)
-
-        std_b1_1 = Button(bg_img,command=self.student_pannels,text="Student Pannel",cursor="hand2",font=("tahoma",15,"bold"),bg="white",fg="navyblue")
-        std_b1_1.place(x=250,y=280,width=180,height=45)
-
-        # Detect Face  button 2
-        det_img_btn = Image.open(os.path.join(IMAGE_DIR, "det1.jpg"))
-        det_img_btn=det_img_btn.resize((180,180),Image.LANCZOS)
-        self.det_img1=ImageTk.PhotoImage(det_img_btn)
-
-        det_b1 = Button(bg_img,command=self.face_rec,image=self.det_img1,cursor="hand2",)
-        det_b1.place(x=480,y=100,width=180,height=180)
-
-        det_b1_1 = Button(bg_img,command=self.face_rec,text="Face Detector",cursor="hand2",font=("tahoma",15,"bold"),bg="white",fg="navyblue")
-        det_b1_1.place(x=480,y=280,width=180,height=45)
-
-         # Attendance System  button 3
-        att_img_btn = Image.open(os.path.join(IMAGE_DIR, "att.jpg"))
-        att_img_btn=att_img_btn.resize((180,180),Image.LANCZOS)
-        self.att_img1=ImageTk.PhotoImage(att_img_btn)
-
-        att_b1 = Button(bg_img,command=self.attendance_pannel,image=self.att_img1,cursor="hand2",)
-        att_b1.place(x=710,y=100,width=180,height=180)
-
-        att_b1_1 = Button(bg_img,command=self.attendance_pannel,text="Attendance",cursor="hand2",font=("tahoma",15,"bold"),bg="white",fg="navyblue")
-        att_b1_1.place(x=710,y=280,width=180,height=45)
-
-         # Help  Support  button 4
-        hlp_img_btn = Image.open(os.path.join(IMAGE_DIR, "hlp.jpg"))
-        hlp_img_btn=hlp_img_btn.resize((180,180),Image.LANCZOS)
-        self.hlp_img1=ImageTk.PhotoImage(hlp_img_btn)
-
-        hlp_b1 = Button(bg_img,image=self.hlp_img1,cursor="hand2",)
-        hlp_b1.place(x=940,y=100,width=180,height=180)
-
-        hlp_b1_1 = Button(bg_img,text="Help Support",cursor="hand2",font=("tahoma",15,"bold"),bg="white",fg="navyblue")
-        hlp_b1_1.place(x=940,y=280,width=180,height=45)
-
-        # Top 4 buttons end.......
-        # ---------------------------------------------------------------------------------------------------------------------------
-        # Start below buttons.........
-         # Train   button 5
-        tra_img_btn = Image.open(os.path.join(IMAGE_DIR, "tra1.jpg"))
-        tra_img_btn=tra_img_btn.resize((180,180),Image.LANCZOS)
-        self.tra_img1=ImageTk.PhotoImage(tra_img_btn)
-
-        tra_b1 = Button(bg_img,command=self.train_pannels,image=self.tra_img1,cursor="hand2",)
-        tra_b1.place(x=250,y=330,width=180,height=180)
-
-        tra_b1_1 = Button(bg_img,command=self.train_pannels,text="Data Train",cursor="hand2",font=("tahoma",15,"bold"),bg="white",fg="navyblue")
-        tra_b1_1.place(x=250,y=510,width=180,height=45)
-
-        # Photo   button 6
-        pho_img_btn = Image.open(os.path.join(IMAGE_DIR, "qr1.png"))
-        pho_img_btn=pho_img_btn.resize((180,180),Image.LANCZOS)
-        self.pho_img1=ImageTk.PhotoImage(pho_img_btn)
-
-        pho_b1 = Button(bg_img,command=self.open_img,image=self.pho_img1,cursor="hand2",)
-        pho_b1.place(x=480,y=330,width=180,height=180)
-
-        pho_b1_1 = Button(bg_img,command=self.open_img,text="QR-Codes",cursor="hand2",font=("tahoma",15,"bold"),bg="white",fg="navyblue")
-        pho_b1_1.place(x=480,y=510,width=180,height=45)
-
-        # Developers   button 7
-        dev_img_btn = Image.open(os.path.join(IMAGE_DIR, "dev.jpg"))
-        dev_img_btn=dev_img_btn.resize((180,180),Image.LANCZOS)
-        self.dev_img1=ImageTk.PhotoImage(dev_img_btn)
-
-        dev_b1 = Button(bg_img,command=self.developr,image=self.dev_img1,cursor="hand2",)
-        dev_b1.place(x=710,y=330,width=180,height=180)
-
-        dev_b1_1 = Button(bg_img,command=self.developr,text="Developers",cursor="hand2",font=("tahoma",15,"bold"),bg="white",fg="navyblue")
-        dev_b1_1.place(x=710,y=510,width=180,height=45)
-
-        # exit   button 8
-        exi_img_btn = Image.open(os.path.join(IMAGE_DIR, "exi.jpg"))
-        exi_img_btn=exi_img_btn.resize((180,180),Image.LANCZOS)
-        self.exi_img1=ImageTk.PhotoImage(exi_img_btn)
-
-        exi_b1 = Button(bg_img,image=self.exi_img1,cursor="hand2",)
-        exi_b1.place(x=940,y=330,width=180,height=180)
-
-        exi_b1_1 = Button(bg_img,text="Exit",cursor="hand2",font=("tahoma",15,"bold"),bg="white",fg="navyblue")
-        exi_b1_1.place(x=940,y=510,width=180,height=45)
-
-# ==================Funtion for Open Images Folder==================
-    def open_img(self):
-        os.startfile("data_img")
-# ==================Functions Buttons=====================
-    def student_pannels(self):
-        self.new_window=Toplevel(self.root)
-        self.app=Student(self.new_window)
-
-    def train_pannels(self):
-        self.new_window=Toplevel(self.root)
-        self.app=Train(self.new_window)
-    
-    def face_rec(self):
-        self.new_window=Toplevel(self.root)
-        self.app=Face_Recognition(self.new_window)
-    
-    def attendance_pannel(self):
-        self.new_window=Toplevel(self.root)
-        self.app=Attendance(self.new_window)
-    
-    def developr(self):
-        self.new_window=Toplevel(self.root)
-        self.app=Developer(self.new_window)
-    
-    def open_img(self):
-        os.startfile("dataset")
-    
-  
-
-
 
 
 if __name__ == "__main__":

@@ -12,140 +12,357 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 IMAGE_DIR = os.path.join(BASE_DIR, "Images_GUI")
 
 class Register:
-    def __init__(self,root):
-        self.root=root
-        self.root.title("Register")
-        self.root.geometry("1366x768+0+0")
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Register • Face Recognition Attendance System")
+        self.root.geometry("1260x820")
+        self.root.minsize(1000, 700)
+        try:
+            self.root.state("zoomed")
+        except Exception:
+            pass
+        self.root.configure(bg="#F7F9FC")
 
-        # ============ Variables =================
-        self.var_fname=StringVar()
-        self.var_lname=StringVar()
-        self.var_cnum=StringVar()
-        self.var_email=StringVar()
-        self.var_ssq=StringVar()
-        self.var_sa=StringVar()
-        self.var_pwd=StringVar()
-        self.var_cpwd=StringVar()
-        self.var_check=IntVar()
+        # -------------------- Variables --------------------
+        self.var_fname = StringVar()
+        self.var_lname = StringVar()
+        self.var_cnum = StringVar()
+        self.var_email = StringVar()
+        self.var_ssq = StringVar()
+        self.var_sa = StringVar()
+        self.var_pwd = StringVar()
+        self.var_cpwd = StringVar()
+        self.var_check = IntVar()
+        self.var_showpwd = IntVar()
 
-        self.bg = ImageTk.PhotoImage(file=os.path.join(IMAGE_DIR, "bgReg.jpg"))
-        
-        lb1_bg=Label(self.root,image=self.bg)
-        lb1_bg.place(x=0,y=0, relwidth=1,relheight=1)
+        # -------------------- Theme --------------------
+        WHITE = "#FFFFFF"
+        BG = "#F7F9FC"
+        BLUE = "#2563EB"
+        BLUE_DARK = "#172554"
+        BLUE_SOFT = "#EFF6FF"
+        PINK = "#EC4899"
+        PINK_SOFT = "#FDF2F8"
+        TEXT = "#1E293B"
+        MUTED = "#64748B"
+        BORDER = "#E2E8F0"
 
-        frame= Frame(self.root,bg="#F2F2F2")
-        frame.place(x=190,y=50,width=900,height=580)
-        
-        reg_lb = Label(frame,text="Welcome to Face Detection Attendance System",font=("times new roman",25,"bold"),fg="#03045e")
-        reg_lb.place(x=140,y=20)
-        
+        style = ttk.Style(self.root)
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
 
-        get_str = Label(frame,text="Registration",font=("times new roman",30,"bold"),fg="#002B53",bg="#F2F2F2")
-        get_str.place(x=350,y=130)
+        style.configure(
+            "Reg.TEntry",
+            fieldbackground=WHITE,
+            background=WHITE,
+            foreground=TEXT,
+            bordercolor=BORDER,
+            lightcolor=BORDER,
+            darkcolor=BORDER,
+            padding=(11, 9),
+            font=("Segoe UI", 10),
+        )
+        style.map(
+            "Reg.TEntry",
+            bordercolor=[("focus", BLUE)],
+            lightcolor=[("focus", BLUE)],
+            darkcolor=[("focus", BLUE)],
+        )
 
-        #label1 
-        fname =lb1= Label(frame,text="First Name:",font=("times new roman",15,"bold"),fg="#002B53",bg="#F2F2F2")
-        fname.place(x=100,y=200)
+        style.configure(
+            "Reg.TCombobox",
+            fieldbackground=WHITE,
+            background=WHITE,
+            foreground=TEXT,
+            arrowcolor=BLUE,
+            bordercolor=BORDER,
+            lightcolor=BORDER,
+            darkcolor=BORDER,
+            padding=(9, 9),
+            font=("Segoe UI", 10),
+        )
+        style.map(
+            "Reg.TCombobox",
+            fieldbackground=[("readonly", WHITE)],
+            bordercolor=[("focus", BLUE)],
+            lightcolor=[("focus", BLUE)],
+            darkcolor=[("focus", BLUE)],
+        )
 
-        #entry1 
-        self.txtuser=ttk.Entry(frame,textvariable=self.var_fname,font=("times new roman",15,"bold"))
-        self.txtuser.place(x=103,y=225,width=270)
+        style.configure(
+            "Reg.Primary.TButton",
+            background=BLUE,
+            foreground=WHITE,
+            relief="flat",
+            borderwidth=0,
+            padding=(18, 10),
+            font=("Segoe UI", 10, "bold"),
+        )
+        style.map(
+            "Reg.Primary.TButton",
+            background=[("active", "#1D4ED8"), ("pressed", "#1E40AF")],
+        )
 
+        style.configure(
+            "Reg.Secondary.TButton",
+            background=WHITE,
+            foreground=BLUE,
+            relief="flat",
+            borderwidth=1,
+            bordercolor=BORDER,
+            padding=(18, 10),
+            font=("Segoe UI", 10, "bold"),
+        )
+        style.map(
+            "Reg.Secondary.TButton",
+            background=[("active", BLUE_SOFT), ("pressed", "#DBEAFE")],
+            bordercolor=[("focus", BLUE)],
+        )
 
-        #label2 
-        lname =lb1= Label(frame,text="Last Name:",font=("times new roman",15,"bold"),fg="#002B53",bg="#F2F2F2")
-        lname.place(x=100,y=270)
+        # -------------------- Responsive split layout --------------------
+        self.root.grid_rowconfigure(0, weight=1)
+        self.root.grid_columnconfigure(0, weight=11)
+        self.root.grid_columnconfigure(1, weight=9)
 
-        #entry2 
-        self.txtpwd=ttk.Entry(frame,textvariable=self.var_lname,font=("times new roman",15,"bold"))
-        self.txtpwd.place(x=103,y=295,width=270)
+        visual = Frame(self.root, bg=BLUE_DARK)
+        visual.grid(row=0, column=0, sticky="nsew", padx=(20, 8), pady=20)
 
-        # ==================== section 2 -------- 2nd Columan===================
+        form_area = Frame(self.root, bg=BG)
+        form_area.grid(row=0, column=1, sticky="nsew", padx=(8, 20), pady=20)
+        form_area.grid_rowconfigure(0, weight=1)
+        form_area.grid_columnconfigure(0, weight=1)
 
-        #label1 
-        cnum =lb1= Label(frame,text="Contact No:",font=("times new roman",15,"bold"),fg="#002B53",bg="#F2F2F2")
-        cnum.place(x=530,y=200)
+        # -------------------- Left branding panel: same language as Login --------------------
+        Frame(visual, bg=PINK, width=175, height=175).place(
+            relx=0.90, rely=-0.08, anchor="ne"
+        )
+        Frame(visual, bg=BLUE, width=135, height=135).place(
+            relx=-0.05, rely=0.90, anchor="sw"
+        )
+        Frame(visual, bg="#60A5FA", width=76, height=76).place(
+            relx=0.12, rely=0.10
+        )
+        Frame(visual, bg="#F9A8D4", width=60, height=60).place(
+            relx=0.80, rely=0.80
+        )
 
-        #entry1 
-        self.txtuser=ttk.Entry(frame,textvariable=self.var_cnum,font=("times new roman",15,"bold"))
-        self.txtuser.place(x=533,y=225,width=270)
+        visual_content = Frame(visual, bg=BLUE_DARK)
+        visual_content.place(relx=0.12, rely=0.16, relwidth=0.76, relheight=0.70)
 
+        Label(
+            visual_content,
+            text="FACE RECOGNITION",
+            bg=BLUE_DARK,
+            fg="#BFDBFE",
+            font=("Segoe UI", 10, "bold"),
+        ).pack(anchor="w")
 
-        #label2 
-        email =lb1= Label(frame,text="Email:",font=("times new roman",15,"bold"),fg="#002B53",bg="#F2F2F2")
-        email.place(x=530,y=270)
+        Label(
+            visual_content,
+            text="Attendance\nSystem",
+            bg=BLUE_DARK,
+            fg=WHITE,
+            font=("Segoe UI", 32, "bold"),
+            justify="left",
+        ).pack(anchor="w", pady=(10, 8))
 
-        #entry2 - Adding a placeholder text for email
-        self.txtemail=ttk.Entry(frame,textvariable=self.var_email,font=("times new roman",15,"bold"))
-        self.txtemail.place(x=533,y=295,width=270)
-        self.var_email.set("example@gmail.com")  # Placeholder text
-        
-        # Bind focus events to clear/restore placeholder
+        Label(
+            visual_content,
+            text="Smart student management,\nface recognition and attendance tracking.",
+            bg=BLUE_DARK,
+            fg="#CBD5E1",
+            font=("Segoe UI", 11),
+            justify="left",
+        ).pack(anchor="w")
+
+        feature = Frame(visual_content, bg="#1E3A8A")
+        feature.pack(fill="x", pady=(38, 0))
+
+        Label(
+            feature,
+            text="SECURE  •  SIMPLE  •  CONNECTED",
+            bg="#1E3A8A",
+            fg="#DBEAFE",
+            font=("Segoe UI", 8, "bold"),
+            padx=14,
+            pady=11,
+        ).pack(anchor="w")
+
+        Label(
+            visual_content,
+            text="Face Recognition Attendance System",
+            bg=BLUE_DARK,
+            fg="#93C5FD",
+            font=("Segoe UI", 8),
+        ).pack(anchor="w", side="bottom", pady=(18, 0))
+
+        # -------------------- Full-width register form --------------------
+        card = Frame(
+            form_area,
+            bg=WHITE,
+            highlightthickness=1,
+            highlightbackground=BORDER,
+        )
+        card.grid(row=0, column=0, sticky="nsew", pady=18)
+        card.grid_columnconfigure(0, weight=1)
+
+        Frame(card, bg=PINK, height=5).grid(
+            row=0, column=0, sticky="ew"
+        )
+
+        inner = Frame(card, bg=WHITE)
+        inner.grid(row=1, column=0, sticky="nsew", padx=30, pady=26)
+        inner.grid_rowconfigure(2, weight=1)
+        inner.grid_columnconfigure(0, weight=1)
+        inner.grid_columnconfigure(1, weight=1)
+
+        Label(
+            inner,
+            text="Create your account",
+            bg=WHITE,
+            fg=BLUE_DARK,
+            font=("Segoe UI", 22, "bold"),
+        ).grid(row=0, column=0, columnspan=2, sticky="w")
+
+        Label(
+            inner,
+            text="Register an account to access the attendance system.",
+            bg=WHITE,
+            fg=MUTED,
+            font=("Segoe UI", 9),
+        ).grid(row=1, column=0, columnspan=2, sticky="w", pady=(4, 17))
+
+        left = Frame(inner, bg=WHITE)
+        left.grid(row=2, column=0, sticky="nsew", padx=(0, 8))
+        right = Frame(inner, bg=WHITE)
+        right.grid(row=2, column=1, sticky="nsew", padx=(8, 0))
+
+        left.grid_columnconfigure(0, weight=1)
+        right.grid_columnconfigure(0, weight=1)
+
+        def field_label(parent, text, row):
+            Label(
+                parent,
+                text=text,
+                bg=WHITE,
+                fg=TEXT,
+                font=("Segoe UI", 8, "bold"),
+            ).grid(row=row, column=0, sticky="w", pady=(0, 4))
+
+        field_label(left, "FIRST NAME", 0)
+        ttk.Entry(left, textvariable=self.var_fname, style="Reg.TEntry").grid(
+            row=1, column=0, sticky="ew", pady=(0, 9)
+        )
+
+        field_label(left, "LAST NAME", 2)
+        ttk.Entry(left, textvariable=self.var_lname, style="Reg.TEntry").grid(
+            row=3, column=0, sticky="ew", pady=(0, 9)
+        )
+
+        field_label(left, "CONTACT NUMBER", 4)
+        ttk.Entry(left, textvariable=self.var_cnum, style="Reg.TEntry").grid(
+            row=5, column=0, sticky="ew", pady=(0, 9)
+        )
+
+        field_label(left, "EMAIL ADDRESS", 6)
+        self.txtemail = ttk.Entry(
+            left, textvariable=self.var_email, style="Reg.TEntry"
+        )
+        self.txtemail.grid(row=7, column=0, sticky="ew", pady=(0, 9))
+        self.var_email.set("example@gmail.com")
         self.txtemail.bind("<FocusIn>", self.on_email_focus_in)
         self.txtemail.bind("<FocusOut>", self.on_email_focus_out)
 
-        # ========================= Section 3 --- 1 Columan=================
-
-        #label1 
-        ssq =lb1= Label(frame,text="Select Security Question:",font=("times new roman",15,"bold"),fg="#002B53",bg="#F2F2F2")
-        ssq.place(x=100,y=350)
-
-        #Combo Box1
-        self.combo_security = ttk.Combobox(frame,textvariable=self.var_ssq,font=("times new roman",15,"bold"),state="readonly")
-        self.combo_security["values"]=("Select","Your Date of Birth","Your Nick Name","Your Favorite Book")
+        field_label(left, "SECURITY QUESTION", 8)
+        self.combo_security = ttk.Combobox(
+            left,
+            textvariable=self.var_ssq,
+            values=("Select", "Your Date of Birth", "Your Nick Name", "Your Favorite Book"),
+            state="readonly",
+            style="Reg.TCombobox",
+        )
+        self.combo_security.grid(row=9, column=0, sticky="ew", pady=(0, 9))
         self.combo_security.current(0)
-        self.combo_security.place(x=103,y=375,width=270)
 
+        field_label(left, "SECURITY ANSWER", 10)
+        ttk.Entry(left, textvariable=self.var_sa, style="Reg.TEntry").grid(
+            row=11, column=0, sticky="ew"
+        )
 
-        #label2 
-        sa =lb1= Label(frame,text="Security Answer:",font=("times new roman",15,"bold"),fg="#002B53",bg="#F2F2F2")
-        sa.place(x=100,y=420)
+        field_label(right, "PASSWORD", 0)
+        self.txtpwd = ttk.Entry(
+            right, textvariable=self.var_pwd, style="Reg.TEntry", show="*"
+        )
+        self.txtpwd.grid(row=1, column=0, sticky="ew", pady=(0, 4))
 
-        #entry2 
-        self.txtpwd=ttk.Entry(frame,textvariable=self.var_sa,font=("times new roman",15,"bold"))
-        self.txtpwd.place(x=103,y=445,width=270)
+        Label(
+            right,
+            text="Minimum 8 characters, including a number and a symbol.",
+            bg=WHITE,
+            fg=MUTED,
+            font=("Segoe UI", 8),
+        ).grid(row=2, column=0, sticky="w", pady=(0, 10))
 
-        # ========================= Section 4-----Column 2=============================
+        field_label(right, "CONFIRM PASSWORD", 3)
+        self.txtcpwd = ttk.Entry(
+            right, textvariable=self.var_cpwd, style="Reg.TEntry", show="*"
+        )
+        self.txtcpwd.grid(row=4, column=0, sticky="ew", pady=(0, 8))
 
-        #label1 
-        pwd =lb1= Label(frame,text="Password:",font=("times new roman",15,"bold"),fg="#002B53",bg="#F2F2F2")
-        pwd.place(x=530,y=350)
+        Checkbutton(
+            right,
+            variable=self.var_showpwd,
+            text="Show password",
+            font=("Segoe UI", 8),
+            fg=TEXT,
+            bg=WHITE,
+            activebackground=WHITE,
+            selectcolor=WHITE,
+            command=self.toggle_password,
+        ).grid(row=5, column=0, sticky="w", pady=(0, 14))
 
-        #entry1 - Password with show="*" to hide characters
-        self.txtpwd=ttk.Entry(frame,textvariable=self.var_pwd,font=("times new roman",15,"bold"), show="*")
-        self.txtpwd.place(x=533,y=375,width=270)
-        
-        # Password hint label
-        pwd_hint = Label(frame,text="Minimum 8 characters with numbers and symbols",font=("times new roman",10),fg="gray",bg="#F2F2F2")
-        pwd_hint.place(x=533,y=400)
+        Label(
+            right,
+            text="ACCOUNT AGREEMENT",
+            bg=WHITE,
+            fg=BLUE,
+            font=("Segoe UI", 8, "bold"),
+        ).grid(row=6, column=0, sticky="w", pady=(0, 7))
 
-        #label2 
-        cpwd =lb1= Label(frame,text="Confirm Password:",font=("times new roman",15,"bold"),fg="#002B53",bg="#F2F2F2")
-        cpwd.place(x=530,y=420)
+        Checkbutton(
+            right,
+            variable=self.var_check,
+            text="I agree to the Terms & Conditions",
+            font=("Segoe UI", 8),
+            fg=TEXT,
+            bg=WHITE,
+            activebackground=WHITE,
+            selectcolor=WHITE,
+        ).grid(row=7, column=0, sticky="w")
 
-        #entry2 - Confirm password with show="*" to hide characters
-        self.txtcpwd=ttk.Entry(frame,textvariable=self.var_cpwd,font=("times new roman",15,"bold"), show="*")
-        self.txtcpwd.place(x=533,y=445,width=270)
+        ttk.Button(
+            right,
+            text="Register",
+            command=self.reg,
+            style="Reg.Primary.TButton",
+        ).grid(row=8, column=0, sticky="ew", pady=(18, 7))
 
-        # Show/Hide Password Checkbox
-        self.var_showpwd = IntVar()
-        show_pwd_check = Checkbutton(frame, variable=self.var_showpwd, text="Show Password", 
-                                    font=("times new roman", 10), fg="#002B53", bg="#F2F2F2",
-                                    command=self.toggle_password)
-        show_pwd_check.place(x=533, y=470, width=120)
+        ttk.Button(
+            right,
+            text="Back to Login",
+            command=self.open_login,
+            style="Reg.Secondary.TButton",
+        ).grid(row=9, column=0, sticky="ew")
 
-        # Checkbutton for terms and conditions
-        checkbtn = Checkbutton(frame,variable=self.var_check,text="I Agree the Terms & Conditions",font=("times new roman",13,"bold"),fg="#002B53",bg="#F2F2F2")
-        checkbtn.place(x=100,y=480,width=270)
-
-
-        # Creating Button Register
-        loginbtn=Button(frame,command=self.reg,text="Register",font=("times new roman",15,"bold"),bd=0,relief=RIDGE,fg="#fff",bg="#002B53",activeforeground="white",activebackground="#007ACC")
-        loginbtn.place(x=103,y=510,width=270,height=35)
-
-        # Creating Button Login - Modified to return to login
-        loginbtn=Button(frame,command=self.open_login,text="Login",font=("times new roman",15,"bold"),bd=0,relief=RIDGE,fg="#fff",bg="#002B53",activeforeground="white",activebackground="#007ACC")
-        loginbtn.place(x=533,y=510,width=270,height=35)
+        Label(
+            card,
+            text="Your registration details are stored in the application's database.",
+            bg=WHITE,
+            fg=MUTED,
+            font=("Segoe UI", 8),
+        ).grid(row=2, column=0, sticky="w", padx=34, pady=(0, 16))
 
     def on_email_focus_in(self, event):
         """Clear placeholder text when entry gets focus"""
@@ -262,7 +479,7 @@ class Register:
             mycursor = conn.cursor()
             
             # Check if user already exists
-            query=("select * from regteach where email=%s")
+            query=("select * from regteach where BINARY email = BINARY %s")
             value=(email,)
             mycursor.execute(query,value)
             row=mycursor.fetchone()
