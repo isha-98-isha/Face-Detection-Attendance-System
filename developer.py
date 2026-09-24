@@ -1,74 +1,137 @@
-from tkinter import*
-from tkinter import ttk
-from train import Train
-from PIL import Image,ImageTk
-from student import Student
-from train import Train
-from face_recognition import Face_Recognition
-from attendance import Attendance
 import os
+from tkinter import *
+from tkinter import ttk
+from tkinter import messagebox
+from PIL import Image, ImageTk
+
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 IMAGE_DIR = os.path.join(BASE_DIR, "Images_GUI")
 
+
 class Developer:
-    def __init__(self,root):
-        self.root=root
-        self.root.geometry("1366x768+0+0")
-        self.root.title("Face_Recogonition_System")
+    def __init__(self, root, authenticated=False):
+        self.root = root
+        if not authenticated:
+            from Session_utils import redirect_to_login
+            redirect_to_login(root)
+            return
+        self.root.title("Developers - Face Recognition Attendance System")
+        self.root.geometry("1180x760")
+        self.root.minsize(900, 620)
+        try:
+            self.root.state("zoomed")
+        except Exception:
+            pass
 
-# This part is image labels setting start 
-        # first header image  
-        img = Image.open(os.path.join(IMAGE_DIR, "banner.jpg"))
-        img=img.resize((1366,130),Image.LANCZOS)
-        self.photoimg=ImageTk.PhotoImage(img)
+        BG = "#F7F9FC"
+        WHITE = "#FFFFFF"
+        BLUE = "#2563EB"
+        DARK_BLUE = "#172554"
+        PINK = "#EC4899"
+        TEXT = "#1E293B"
+        MUTED = "#64748B"
+        BORDER = "#E2E8F0"
+        SOFT_BLUE = "#EFF6FF"
+        SOFT_PINK = "#FDF2F8"
 
-        # set image as lable
-        f_lb1 = Label(self.root,image=self.photoimg)
-        f_lb1.place(x=0,y=0,width=1366,height=130)
+        self.root.configure(bg=BG)
+        self.root.protocol("WM_DELETE_WINDOW", self.root.destroy)
 
-        # backgorund image 
-        bg1 = Image.open(os.path.join(IMAGE_DIR, "bg3.jpg"))
-        bg1=bg1.resize((1366,768),Image.LANCZOS)
-        self.photobg1=ImageTk.PhotoImage(bg1)
+        style = ttk.Style(self.root)
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
+        style.configure(
+            "Developer.Primary.TButton", background=BLUE, foreground=WHITE,
+            relief="flat", borderwidth=0, padding=(16, 9),
+            font=("Segoe UI", 10, "bold"))
+        style.map("Developer.Primary.TButton", background=[("active", "#1D4ED8")])
+        style.configure(
+            "Developer.Secondary.TButton", background=WHITE, foreground=TEXT,
+            relief="flat", borderwidth=1, bordercolor=BORDER, padding=(16, 9),
+            font=("Segoe UI", 10, "bold"))
+        style.map("Developer.Secondary.TButton", background=[("active", "#F8FAFC")])
 
-        # set image as lable
-        bg_img = Label(self.root,image=self.photobg1)
-        bg_img.place(x=0,y=130,width=1366,height=768)
+        self.root.grid_rowconfigure(1, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
 
+        header = Frame(self.root, bg=WHITE, height=82)
+        header.grid(row=0, column=0, sticky="ew")
+        header.grid_propagate(False)
+        header.grid_columnconfigure(1, weight=1)
 
-        #title section
-        title_lb1 = Label(bg_img,text="Developer Pannel",font=("verdana",30,"bold"),bg="white",fg="navyblue")
-        title_lb1.place(x=0,y=0,width=1366,height=45)
+        mark = Frame(header, bg=BLUE, width=48, height=48)
+        mark.grid(row=0, column=0, padx=(24, 14), pady=17)
+        mark.grid_propagate(False)
+        Label(mark, text="FR", bg=BLUE, fg=WHITE,
+              font=("Segoe UI", 14, "bold")).pack(expand=True)
 
-        # Create buttons below the section 
-        # ------------------------------------------------------------------------------------------------------------------- 
-        # bhumika 
-        det_img_btn = Image.open(os.path.join(IMAGE_DIR, "phong.jpg"))
-        det_img_btn=det_img_btn.resize((180,180),Image.LANCZOS)
-        self.det_img1=ImageTk.PhotoImage(det_img_btn)
+        brand = Frame(header, bg=WHITE)
+        brand.grid(row=0, column=1, sticky="nsw", pady=13)
+        Label(brand, text="Face Recognition Attendance System", bg=WHITE,
+              fg=DARK_BLUE, font=("Segoe UI", 18, "bold")).pack(anchor="w")
+        Label(brand, text="Project and developer information", bg=WHITE,
+              fg=MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(2, 0))
+        ttk.Button(header, text="Back to Dashboard", command=self.root.destroy,
+                   style="Developer.Secondary.TButton").grid(
+                       row=0, column=2, padx=(10, 24), pady=19)
+        Frame(header, bg=BORDER, height=1).place(
+            relx=0, rely=1.0, relwidth=1.0, anchor="sw")
 
-        det_b1 = Button(bg_img,image=self.det_img1,cursor="hand2",)
-        det_b1.place(x=440,y=150,width=200,height=180)
+        content = Frame(self.root, bg=BG)
+        content.grid(row=1, column=0, sticky="nsew", padx=24, pady=22)
+        content.grid_rowconfigure(1, weight=1)
+        content.grid_columnconfigure(0, weight=1)
 
-        det_b1_1 = Button(bg_img,text="Bhumika Chaudhari",cursor="hand2",font=("tahoma",15,"bold"),bg="white",fg="navyblue")
-        det_b1_1.place(x=440,y=330,width=200,height=45)
+        intro = Frame(content, bg=BG)
+        intro.grid(row=0, column=0, sticky="ew", pady=(0, 18))
+        Label(intro, text="Meet the developers", bg=BG, fg=TEXT,
+              font=("Segoe UI", 23, "bold")).pack(anchor="w")
+        Label(intro, text="The people behind this attendance management project.",
+              bg=BG, fg=MUTED, font=("Segoe UI", 10)).pack(anchor="w", pady=(4, 0))
 
-        # Isha
-        att_img_btn = Image.open(os.path.join(IMAGE_DIR, "developer.jpg"))
-        att_img_btn=att_img_btn.resize((180,180),Image.LANCZOS)
-        self.att_img1=ImageTk.PhotoImage(att_img_btn)
+        cards = Frame(content, bg=BG)
+        cards.grid(row=1, column=0, sticky="nsew")
+        cards.grid_columnconfigure(0, weight=1, uniform="developer")
+        cards.grid_columnconfigure(1, weight=1, uniform="developer")
+        cards.grid_rowconfigure(0, weight=1)
 
-        att_b1 = Button(bg_img,image=self.att_img1,cursor="hand2",)
-        att_b1.place(x=690,y=150,width=200,height=180)
+        developers = [
+            ("phong.jpg", "Bhumika Chaudhari", "Developer", BLUE, SOFT_BLUE),
+            ("developer.jpg", "Isha Chaudhari", "Developer", PINK, SOFT_PINK),
+        ]
+        self.photos = []
+        for column, (filename, name, role, accent, soft) in enumerate(developers):
+            card = Frame(cards, bg=WHITE, highlightbackground=BORDER, highlightthickness=1)
+            card.grid(row=0, column=column, sticky="nsew",
+                      padx=(0 if column == 0 else 9, 9 if column == 0 else 0))
+            Frame(card, bg=accent, height=8).pack(fill=X)
 
-        att_b1_1 = Button(bg_img,text="Isha Chaudhari",cursor="hand2",font=("tahoma",15,"bold"),bg="white",fg="navyblue")
-        att_b1_1.place(x=690,y=330,width=200,height=45)
+            photo_frame = Frame(card, bg=soft, width=190, height=190)
+            photo_frame.pack(pady=(42, 24))
+            photo_frame.pack_propagate(False)
+            try:
+                image = Image.open(os.path.join(IMAGE_DIR, filename)).resize(
+                    (180, 180), Image.LANCZOS)
+                photo = ImageTk.PhotoImage(image)
+                self.photos.append(photo)
+                Label(photo_frame, image=photo, bg=soft).pack(expand=True)
+            except Exception:
+                Label(photo_frame, text="PHOTO", bg=soft, fg=accent,
+                      font=("Segoe UI", 16, "bold")).pack(expand=True)
 
-
-
+            Label(card, text=name, bg=WHITE, fg=TEXT,
+                  font=("Segoe UI", 17, "bold")).pack()
+            Label(card, text=role, bg=WHITE, fg=accent,
+                  font=("Segoe UI", 10, "bold")).pack(pady=(5, 0))
+            Frame(card, bg=BORDER, height=1).pack(fill=X, padx=32, pady=24)
+            Label(card, text="Face Recognition Attendance System",
+                  bg=WHITE, fg=MUTED, font=("Segoe UI", 9)).pack(pady=(0, 28))
 
 
 if __name__ == "__main__":
-    root=Tk()
-    obj=Developer(root)
+    root = Tk()
+    Developer(root)
     root.mainloop()

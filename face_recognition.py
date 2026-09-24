@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import *
 from tkinter import ttk
 from PIL import Image, ImageTk
 import os
@@ -11,53 +12,220 @@ import numpy as np
 from tkinter import messagebox
 from time import strftime
 from datetime import datetime
-from db_config import DB_CONFIG
+from db_config import DB_CONFIG, owner_attendance_path, owner_model_path
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 IMAGE_DIR = os.path.join(BASE_DIR, "Images_GUI")
 class Face_Recognition:
-    def __init__(self, root):
+    def __init__(self, root, authenticated=False, owner_email=None):
         self.root = root
-        self.root.geometry("1366x768+0+0")
-        self.root.title("Face Recognition Pannel")
-        
+        if not authenticated:
+            from Session_utils import redirect_to_login
+            redirect_to_login(root)
+            return
+        self.owner_email = owner_email
+        self.model_path = owner_model_path(owner_email)
+        self.attendance_path = owner_attendance_path(owner_email)
+        self.root.title("Face Recognition • Face Recognition Attendance System")
+        self.root.geometry("1280x780")
+        self.root.minsize(1050, 680)
+        try:
+            self.root.state("zoomed")
+        except Exception:
+            pass
+
         # Register window close event handler for the main window
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
-        # Image and background setup
-        img = Image.open(os.path.join(IMAGE_DIR, "banner.jpg"))
-        img = img.resize((1366, 130), Image.LANCZOS)
-        self.photoimg = ImageTk.PhotoImage(img)
+        # -------------------- Design system --------------------
+        BG = "#F7F9FC"
+        WHITE = "#FFFFFF"
+        BLUE = "#2563EB"
+        DARK_BLUE = "#172554"
+        PINK = "#EC4899"
+        TEXT = "#1E293B"
+        MUTED = "#64748B"
+        BORDER = "#E2E8F0"
+        SOFT_BLUE = "#EFF6FF"
+        SOFT_PINK = "#FDF2F8"
+        DANGER = "#DC2626"
+        SOFT_DANGER = "#FEF2F2"
 
-        f_lb1 = tk.Label(self.root, image=self.photoimg)
-        f_lb1.place(x=0, y=0, width=1366, height=130)
+        self.root.configure(bg=BG)
 
-        bg1 = Image.open(os.path.join(IMAGE_DIR, "bg3.jpg"))
-        bg1 = bg1.resize((1366, 768), Image.LANCZOS)
-        self.photobg1 = ImageTk.PhotoImage(bg1)
+        # -------------------- ttk styles --------------------
+        style = ttk.Style(self.root)
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
 
-        bg_img = tk.Label(self.root, image=self.photobg1)
-        bg_img.place(x=0, y=130, width=1366, height=768)
+        style.configure(
+            "Primary.TButton",
+            background=BLUE,
+            foreground=WHITE,
+            borderwidth=0,
+            focusthickness=0,
+            padding=(18, 11),
+            font=("Segoe UI", 11, "bold"),
+        )
+        style.map(
+            "Primary.TButton",
+            background=[("active", "#1D4ED8"), ("pressed", "#1E40AF")],
+        )
 
-        # Title section
-        title_lb1 = tk.Label(bg_img, text="Welcome to Face Recognition Pannel", font=("verdana", 30, "bold"), bg="white", fg="navyblue")
-        title_lb1.place(x=0, y=0, width=1366, height=45)
+        style.configure(
+            "Danger.TButton",
+            background=DANGER,
+            foreground=WHITE,
+            borderwidth=0,
+            focusthickness=0,
+            padding=(18, 11),
+            font=("Segoe UI", 11, "bold"),
+        )
+        style.map(
+            "Danger.TButton",
+            background=[("active", "#B91C1C"), ("pressed", "#991B1B")],
+        )
 
-        # Face Detector Button
-        std_img_btn = Image.open(os.path.join(IMAGE_DIR, "f_det.jpg"))
-        std_img_btn = std_img_btn.resize((180, 180), Image.LANCZOS)
-        self.std_img1 = ImageTk.PhotoImage(std_img_btn)
+        # -------------------- Root layout --------------------
+        self.root.grid_rowconfigure(0, weight=0)
+        self.root.grid_rowconfigure(1, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
 
-        std_b1 = tk.Button(bg_img, command=self.start_face_recognition, image=self.std_img1, cursor="hand2")
-        std_b1.place(x=600, y=180, width=150, height=180)
+        # -------------------- Header --------------------
+        header = Frame(self.root, bg=WHITE, height=82)
+        header.grid(row=0, column=0, sticky="ew")
+        header.grid_propagate(False)
+        header.grid_columnconfigure(1, weight=1)
 
-        std_b1_1 = tk.Button(bg_img, command=self.start_face_recognition, text="Face Detector", cursor="hand2", font=("tahoma", 15, "bold"), bg="white", fg="navyblue")
-        std_b1_1.place(x=600, y=330, width=150, height=45)
+        brand_mark = Frame(header, bg=BLUE, width=48, height=48)
+        brand_mark.grid(row=0, column=0, padx=(24, 14), pady=17)
+        brand_mark.grid_propagate(False)
 
-        # Button to stop face recognition
-        stop_btn = tk.Button(bg_img, command=self.stop_face_recognition, text="Stop Recognition", cursor="hand2", font=("tahoma", 15, "bold"), bg="white", fg="navyblue")
-        stop_btn.place(x=590, y=390, width=180, height=45)
-        
-        # Flag to control recognition thread
+        Label(
+            brand_mark,
+            text="FR",
+            bg=BLUE,
+            fg=WHITE,
+            font=("Segoe UI", 14, "bold"),
+        ).place(relx=0.5, rely=0.5, anchor="center")
+
+        brand_area = Frame(header, bg=WHITE)
+        brand_area.grid(row=0, column=1, sticky="nsw", pady=13)
+
+        Label(
+            brand_area,
+            text="Face Recognition Attendance System",
+            bg=WHITE,
+            fg=DARK_BLUE,
+            font=("Segoe UI", 18, "bold"),
+        ).pack(anchor="w")
+
+        Label(
+            brand_area,
+            text="Face recognition management",
+            bg=WHITE,
+            fg=MUTED,
+            font=("Segoe UI", 9),
+        ).pack(anchor="w", pady=(2, 0))
+
+        ttk.Button(header, text="Back to Dashboard", command=self.go_back,
+                   style="Primary.TButton").grid(
+                       row=0, column=2, padx=(10, 24), pady=19)
+
+        Frame(header, bg=BORDER, height=1).place(
+            relx=0, rely=1.0, relwidth=1.0, anchor="sw"
+        )
+
+        # -------------------- Body --------------------
+        body = Frame(self.root, bg=BG)
+        body.grid(row=1, column=0, sticky="nsew", padx=24, pady=22)
+        body.grid_columnconfigure(0, weight=1)
+        body.grid_rowconfigure(1, weight=1)
+
+        # Intro
+        intro = Frame(body, bg=BG)
+        intro.grid(row=0, column=0, sticky="ew", pady=(0, 18))
+
+        Label(
+            intro,
+            text="Face Recognition",
+            bg=BG,
+            fg=TEXT,
+            font=("Segoe UI", 22, "bold"),
+        ).pack(anchor="w")
+
+        Label(
+            intro,
+            text="Detect registered students through your camera and mark attendance automatically.",
+            bg=BG,
+            fg=MUTED,
+            font=("Segoe UI", 10),
+        ).pack(anchor="w", pady=(4, 0))
+
+        # Main panel
+        panel_wrap = Frame(body, bg=BG)
+        panel_wrap.grid(row=1, column=0, sticky="nsew")
+        panel_wrap.grid_columnconfigure(0, weight=1)
+        panel_wrap.grid_rowconfigure(0, weight=1)
+
+        panel = Frame(panel_wrap, bg=WHITE, highlightbackground=BORDER, highlightthickness=1)
+        panel.grid(row=0, column=0, sticky="nsew")
+        panel.grid_columnconfigure(0, weight=1)
+        panel.grid_rowconfigure(0, weight=1)
+
+        center = Frame(panel, bg=WHITE)
+        center.grid(row=0, column=0)
+
+        icon_box = Frame(center, bg=SOFT_PINK, width=110, height=110)
+        icon_box.pack(pady=(0, 22))
+        icon_box.pack_propagate(False)
+
+        Label(
+            icon_box,
+            text="\U0001F4F7",
+            bg=SOFT_PINK,
+            fg=PINK,
+            font=("Segoe UI", 40),
+        ).pack(expand=True)
+
+        Label(
+            center,
+            text="Face Detector",
+            bg=WHITE,
+            fg=TEXT,
+            font=("Segoe UI", 18, "bold"),
+        ).pack()
+
+        Label(
+            center,
+            text="Start the camera to recognize registered students and mark their attendance.\nPress Enter or Esc in the camera window, or click Stop, to end the session.",
+            bg=WHITE,
+            fg=MUTED,
+            font=("Segoe UI", 10),
+            justify="center",
+        ).pack(pady=(10, 26))
+
+        btn_row = Frame(center, bg=WHITE)
+        btn_row.pack()
+
+        ttk.Button(
+            btn_row,
+            text="\u25B6  Start Recognition",
+            command=self.start_face_recognition,
+            style="Primary.TButton",
+            cursor="hand2",
+        ).grid(row=0, column=0, padx=(0, 12))
+
+        ttk.Button(
+            btn_row,
+            text="\u25A0  Stop Recognition",
+            command=self.stop_face_recognition,
+            style="Danger.TButton",
+            cursor="hand2",
+        ).grid(row=0, column=1)
+
+
         self.recognition_running = False
         self.recognition_thread = None
         self.videoCap = None
@@ -70,16 +238,19 @@ class Face_Recognition:
         self.stop_face_recognition()
         self.root.destroy()
 
+    def go_back(self):
+        self.on_closing()
+
     def mark_attendance(self, i, r, n):
         try:
             # Create the file if it doesn't exist
-            if not os.path.exists("attendance.csv"):
-                with open("attendance.csv", "w", newline="\n") as f:
+            if not os.path.exists(self.attendance_path):
+                with open(self.attendance_path, "w", newline="\n") as f:
                     f.write("ID,Roll,Name,Time,Date,Attendance\n")
                     print("Created new attendance.csv file")
                     
             # First, check if the person is already in the attendance list
-            with open("attendance.csv", "r", newline="\n") as f:
+            with open(self.attendance_path, "r", newline="\n") as f:
                 myDatalist = f.readlines()
                 name_list = []
                 for line in myDatalist:
@@ -87,13 +258,19 @@ class Face_Recognition:
                     if len(entry) > 0:
                         name_list.append(entry[0])
             
-            # If not in list, then add the attendance record
-            if i not in name_list:
-                now = datetime.now()
-                d1 = now.strftime("%d/%m/%Y")
+            now = datetime.now()
+            d1 = now.strftime("%d/%m/%Y")
+            already_recorded_today = any(
+                line.split(",")[0] == i and len(line.split(",")) > 4
+                and line.split(",")[4] == d1
+                for line in myDatalist
+            )
+
+            # Store one recognition record per student per day.
+            if not already_recorded_today:
                 dtString = now.strftime("%H:%M:%S")
                 # Open the file in append mode
-                with open("attendance.csv", "a", newline="\n") as f:
+                with open(self.attendance_path, "a", newline="\n") as f:
                     f.write(f"{i},{r},{n},{dtString},{d1},Present\n")
                     print(f"Attendance marked for {n}")
         except Exception as e:
@@ -119,15 +296,15 @@ class Face_Recognition:
                 cursor = conn.cursor()
 
                 # Fetch student details
-                cursor.execute("SELECT Name FROM student WHERE Student_ID = %s", (str(id),))
+                cursor.execute("SELECT Name FROM student WHERE Student_ID = %s AND Owner_Email = %s", (str(id), self.owner_email))
                 n = cursor.fetchone()
                 n = "+".join([str(item) for item in n]) if n else "Unknown"
 
-                cursor.execute("SELECT Roll_No FROM student WHERE Student_ID = %s", (str(id),))
+                cursor.execute("SELECT Roll_No FROM student WHERE Student_ID = %s AND Owner_Email = %s", (str(id), self.owner_email))
                 r = cursor.fetchone()
                 r = "+".join([str(item) for item in r]) if r else "Unknown"
 
-                cursor.execute("SELECT Student_ID FROM student WHERE Student_ID = %s", (str(id),))
+                cursor.execute("SELECT Student_ID FROM student WHERE Student_ID = %s AND Owner_Email = %s", (str(id), self.owner_email))
                 i = cursor.fetchone()
                 i = "+".join([str(item) for item in i]) if i else "Unknown"
 
@@ -201,7 +378,7 @@ class Face_Recognition:
                 
             # Load classifier
             recognizer = cv2.face.LBPHFaceRecognizer_create()
-            recognizer.read("clf.xml")
+            recognizer.read(self.model_path)
             
             # Process each face
             for (x,y,w,h) in faces:
@@ -217,7 +394,7 @@ class Face_Recognition:
                     conn = mysql.connector.connect(**DB_CONFIG)
                     cursor = conn.cursor()
                     
-                    cursor.execute("SELECT Name, Roll_No FROM student WHERE Student_ID = %s", (str(id),))
+                    cursor.execute("SELECT Name, Roll_No FROM student WHERE Student_ID = %s AND Owner_Email = %s", (str(id), self.owner_email))
                     result = cursor.fetchone()
                     
                     if result:
@@ -242,7 +419,7 @@ class Face_Recognition:
         try:
             faceCascade = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
             clf = cv2.face.LBPHFaceRecognizer_create()
-            clf.read("clf.xml")
+            clf.read(self.model_path)
 
             self.videoCap = cv2.VideoCapture(0)
             

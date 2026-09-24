@@ -1,101 +1,153 @@
 import os
-from tkinter import*
-from PIL import Image,ImageTk
 import webbrowser
+from tkinter import *
+from tkinter import ttk
+from tkinter import messagebox
+from PIL import Image, ImageTk
+
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 IMAGE_DIR = os.path.join(BASE_DIR, "Images_GUI")
 
 
 class Helpsupport:
-    def __init__(self,root):
-        self.root=root
-        self.root.geometry("1366x768+0+0")
-        self.root.title("Face_Recogonition_System")
+    def __init__(self, root, authenticated=False):
+        self.root = root
+        if not authenticated:
+            from Session_utils import redirect_to_login
+            redirect_to_login(root)
+            return
+        self.root.title("Help and Support - Face Recognition Attendance System")
+        self.root.geometry("1180x760")
+        self.root.minsize(900, 620)
+        try:
+            self.root.state("zoomed")
+        except Exception:
+            pass
 
-# This part is image labels setting start 
-        # first header image  
-        img = Image.open(os.path.join(IMAGE_DIR, "banner.jpg"))
-        img=img.resize((1366,130),Image.LANCZOS)
-        self.photoimg=ImageTk.PhotoImage(img)
+        BG = "#F7F9FC"
+        WHITE = "#FFFFFF"
+        BLUE = "#2563EB"
+        DARK_BLUE = "#172554"
+        PINK = "#EC4899"
+        TEXT = "#1E293B"
+        MUTED = "#64748B"
+        BORDER = "#E2E8F0"
+        SOFT_BLUE = "#EFF6FF"
+        SOFT_PINK = "#FDF2F8"
 
-        # set image as lable
-        f_lb1 = Label(self.root,image=self.photoimg)
-        f_lb1.place(x=0,y=0,width=1366,height=50)
+        self.root.configure(bg=BG)
+        self.root.protocol("WM_DELETE_WINDOW", self.root.destroy)
 
-        # backgorund image 
-        bg1 = Image.open(os.path.join(IMAGE_DIR, "bg4.png"))
-        bg1=bg1.resize((1366,768),Image.LANCZOS)
-        self.photobg1=ImageTk.PhotoImage(bg1)
+        style = ttk.Style(self.root)
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
+        style.configure(
+            "Help.Secondary.TButton", background=WHITE, foreground=TEXT,
+            relief="flat", borderwidth=1, bordercolor=BORDER, padding=(16, 9),
+            font=("Segoe UI", 10, "bold"))
+        style.map("Help.Secondary.TButton", background=[("active", "#F8FAFC")])
+        style.configure(
+            "Help.Primary.TButton", background=BLUE, foreground=WHITE,
+            relief="flat", borderwidth=0, padding=(14, 9),
+            font=("Segoe UI", 10, "bold"))
+        style.map("Help.Primary.TButton", background=[("active", "#1D4ED8")])
 
-        # set image as lable
-        bg_img = Label(self.root,image=self.photobg1)
-        bg_img.place(x=0,y=50,width=1366,height=768)
+        self.root.grid_rowconfigure(1, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
 
+        header = Frame(self.root, bg=WHITE, height=82)
+        header.grid(row=0, column=0, sticky="ew")
+        header.grid_propagate(False)
+        header.grid_columnconfigure(1, weight=1)
 
-        #title section
-        title_lb1 = Label(bg_img,text="Help Support    ",font=("verdana",30,"bold"),bg="white",fg="navyblue")
-        title_lb1.place(x=0,y=0,width=1366,height=45)
+        mark = Frame(header, bg=BLUE, width=48, height=48)
+        mark.grid(row=0, column=0, padx=(24, 14), pady=17)
+        mark.grid_propagate(False)
+        Label(mark, text="FR", bg=BLUE, fg=WHITE,
+              font=("Segoe UI", 14, "bold")).pack(expand=True)
 
-        # Create buttons below the section 
-        # ------------------------------------------------------------------------------------------------------------------- 
-        # student button 1
-        std_img_btn = Image.open(os.path.join(IMAGE_DIR, "web.png"))
-        std_img_btn=std_img_btn.resize((180,180),Image.LANCZOS)
-        self.std_img1=ImageTk.PhotoImage(std_img_btn)
+        brand = Frame(header, bg=WHITE)
+        brand.grid(row=0, column=1, sticky="nsw", pady=13)
+        Label(brand, text="Face Recognition Attendance System", bg=WHITE,
+              fg=DARK_BLUE, font=("Segoe UI", 18, "bold")).pack(anchor="w")
+        Label(brand, text="Support, resources and project links", bg=WHITE,
+              fg=MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(2, 0))
+        ttk.Button(header, text="Back to Dashboard", command=self.root.destroy,
+                   style="Help.Secondary.TButton").grid(
+                       row=0, column=2, padx=(10, 24), pady=19)
+        Frame(header, bg=BORDER, height=1).place(
+            relx=0, rely=1.0, relwidth=1.0, anchor="sw")
 
-        std_b1 = Button(bg_img,command=self.website,image=self.std_img1,cursor="hand2")
-        std_b1.place(x=280,y=200,width=180,height=180)
+        content = Frame(self.root, bg=BG)
+        content.grid(row=1, column=0, sticky="nsew", padx=24, pady=22)
+        content.grid_rowconfigure(1, weight=1)
+        content.grid_columnconfigure(0, weight=1)
 
-        std_b1_1 = Button(bg_img,command=self.website,text="Website",cursor="hand2",font=("tahoma",15,"bold"),bg="white",fg="navyblue")
-        std_b1_1.place(x=280,y=380,width=180,height=45)
+        intro = Frame(content, bg=BG)
+        intro.grid(row=0, column=0, sticky="ew", pady=(0, 18))
+        Label(intro, text="How can we help?", bg=BG, fg=TEXT,
+              font=("Segoe UI", 23, "bold")).pack(anchor="w")
+        Label(intro, text="Find project resources or contact the team through the links below.",
+              bg=BG, fg=MUTED, font=("Segoe UI", 10)).pack(anchor="w", pady=(4, 0))
 
-        # Attendance System  button 3
-        att_img_btn = Image.open(os.path.join(IMAGE_DIR, "yt.png"))
-        att_img_btn=att_img_btn.resize((180,180),Image.LANCZOS)
-        self.att_img1=ImageTk.PhotoImage(att_img_btn)
+        cards = Frame(content, bg=BG)
+        cards.grid(row=1, column=0, sticky="nsew")
+        for column in range(3):
+            cards.grid_columnconfigure(column, weight=1, uniform="help")
+        cards.grid_rowconfigure(0, weight=1)
 
-        att_b1 = Button(bg_img,command=self.youtube,image=self.att_img1,cursor="hand2",)
-        att_b1.place(x=530,y=200,width=180,height=180)
+        links = [
+            ("web.png", "Project Reference", "Read the face-recognition attendance reference material.",
+             self.website, BLUE, SOFT_BLUE),
+            ("yt.png", "Video Resources", "Open video tutorials and related learning resources.",
+             self.youtube, PINK, SOFT_PINK),
+            ("gmail.png", "Contact Support", "Open Gmail to contact the project support team.",
+             self.gmail, BLUE, SOFT_BLUE),
+        ]
+        self.photos = []
+        for column, (filename, title, description, command, accent, soft) in enumerate(links):
+            card = Frame(cards, bg=WHITE, highlightbackground=BORDER, highlightthickness=1)
+            card.grid(row=0, column=column, sticky="nsew",
+                      padx=(0 if column == 0 else 8, 8 if column < 2 else 0))
+            Frame(card, bg=accent, height=8).pack(fill=X)
 
-        att_b1_1 = Button(bg_img,command=self.youtube,text="Youtube",cursor="hand2",font=("tahoma",15,"bold"),bg="white",fg="navyblue")
-        att_b1_1.place(x=530,y=380,width=180,height=45)
+            image_box = Frame(card, bg=soft, width=160, height=160)
+            image_box.pack(pady=(38, 25))
+            image_box.pack_propagate(False)
+            try:
+                image = Image.open(os.path.join(IMAGE_DIR, filename)).resize(
+                    (150, 150), Image.LANCZOS)
+                photo = ImageTk.PhotoImage(image)
+                self.photos.append(photo)
+                Label(image_box, image=photo, bg=soft).pack(expand=True)
+            except Exception:
+                Label(image_box, text="LINK", bg=soft, fg=accent,
+                      font=("Segoe UI", 16, "bold")).pack(expand=True)
 
-        # Help  Support  button 4
-        hlp_img_btn = Image.open(os.path.join(IMAGE_DIR, "gmail.png"))
-        hlp_img_btn=hlp_img_btn.resize((180,180),Image.LANCZOS)
-        self.hlp_img1=ImageTk.PhotoImage(hlp_img_btn)
+            Label(card, text=title, bg=WHITE, fg=TEXT,
+                  font=("Segoe UI", 15, "bold")).pack()
+            Label(card, text=description, bg=WHITE, fg=MUTED,
+                  font=("Segoe UI", 9), wraplength=230, justify="center").pack(
+                      padx=20, pady=(8, 22))
+            ttk.Button(card, text="Open resource", command=command,
+                       style="Help.Primary.TButton").pack(fill=X, padx=36, pady=(0, 30))
 
-        hlp_b1 = Button(bg_img,command=self.gmail,image=self.hlp_img1,cursor="hand2",)
-        hlp_b1.place(x=780,y=200,width=180,height=180)
-
-        hlp_b1_1 = Button(bg_img,command=self.gmail,text="Gmail",cursor="hand2",font=("tahoma",15,"bold"),bg="white",fg="navyblue")
-        hlp_b1_1.place(x=780,y=380,width=180,height=45)
-
-
-        # create function for button 
-    
-    
     def website(self):
-        self.new = 1
-        self.url = "https://www.researchgate.net/publication/341876647_Face_Recognition_based_Attendance_Management_System"
-        webbrowser.open(self.url,new=self.new)
-    
+        webbrowser.open(
+            "https://www.researchgate.net/publication/341876647_Face_Recognition_based_Attendance_Management_System"
+        )
+
     def youtube(self):
-        self.new = 1
-        self.url = "https://www.youtube.com/"
-        webbrowser.open(self.url,new=self.new)
-    
+        webbrowser.open("https://www.youtube.com/")
+
     def gmail(self):
-        self.new = 1
-        self.url = "https://www.gmail.com"
-        webbrowser.open(self.url,new=self.new)
-
-
-
-
+        webbrowser.open("https://www.gmail.com")
 
 
 if __name__ == "__main__":
-    root=Tk()
-    obj=Helpsupport(root)
+    root = Tk()
+    Helpsupport(root)
     root.mainloop()

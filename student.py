@@ -1,338 +1,744 @@
 import os
-from tkinter import* 
+import calendar
+from datetime import datetime
+from tkinter import *
 from tkinter import ttk
-from PIL import Image,ImageTk
+from PIL import Image, ImageTk
 from tkinter import messagebox
 import mysql.connector
 import cv2
-from db_config import DB_CONFIG
+from db_config import DB_CONFIG, owner_data_dir
+
 # Project paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 IMAGE_DIR = os.path.join(BASE_DIR, "Images_GUI")
-# Testing Connection
-conn = mysql.connector.connect(**DB_CONFIG)
 
-cursor = conn.cursor()
-cursor.execute("show databases")
-data = cursor.fetchall()
-print(data)
-conn.close()
 class Student:
-    def __init__(self,root):
-        self.root=root
-        self.root.geometry("1366x768+0+0")
-        self.root.title("Student Pannel")
+    def __init__(self, root, authenticated=False, owner_email=None, owner_name=""):
+        self.root = root
+        if not authenticated:
+            from Session_utils import redirect_to_login
+            redirect_to_login(root)
+            return
+        self.owner_email = owner_email
+        self.owner_name = owner_name
+        self.data_dir = owner_data_dir(owner_email)
+        self.root.title("Student Management • Face Recognition Attendance System")
+        self.root.geometry("1280x780")
+        self.root.minsize(1100, 700)
+        try:
+            self.root.state("zoomed")
+        except Exception:
+            pass
 
-        #-----------Variables-------------------
-        self.var_dep=StringVar()
-        self.var_course=StringVar()
-        self.var_year=StringVar()
-        self.var_semester=StringVar()
-        self.var_std_id=StringVar()
-        self.var_std_name=StringVar()
-        self.var_div=StringVar()
-        self.var_roll=StringVar()
-        self.var_gender=StringVar()
-        self.var_dob=StringVar()
-        self.var_email=StringVar()
-        self.var_mob=StringVar()
-        self.var_address=StringVar()
-        self.var_teacher=StringVar()
+        # Modern light theme
+        BG = "#F7F9FC"
+        WHITE = "#FFFFFF"
+        BLUE = "#2563EB"
+        DARK_BLUE = "#172554"
+        PINK = "#EC4899"
+        TEXT = "#1E293B"
+        MUTED = "#64748B"
+        BORDER = "#E2E8F0"
+        SOFT_BLUE = "#EFF6FF"
+        SOFT_PINK = "#FDF2F8"
+        DANGER = "#DC2626"
 
-    # This part is image labels setting start 
-        # first header image  
-        img=Image.open(os.path.join(IMAGE_DIR, "banner.jpg"))
-        img=img.resize((1366,130),Image.LANCZOS)
-        self.photoimg=ImageTk.PhotoImage(img)
+        self.root.configure(bg=BG)
 
-        # set image as lable
-        f_lb1 = Label(self.root,image=self.photoimg)
-        f_lb1.place(x=0,y=0,width=1366,height=90)
-        
-        std_lb = Label(f_lb1,text="Student Pannel",font=("times new roman",30,"bold"),fg="#03045e",bg="#0077b6")
-        std_lb.place(x=500,y=20)
+        # -------------------- Variables --------------------
+        self.var_dep = StringVar()
+        self.var_course = StringVar()
+        self.var_year = StringVar()
+        self.var_semester = StringVar()
+        self.var_std_id = StringVar()
+        self.var_std_name = StringVar()
+        self.var_div = StringVar()
+        self.var_roll = StringVar()
+        self.var_gender = StringVar()
+        self.var_dob = StringVar()
+        self.var_email = StringVar()
+        self.var_mob = StringVar()
+        self.var_address = StringVar()
+        self.var_teacher = StringVar()
+        self.var_teacher.set(self.owner_name)
+        self.var_radio1 = StringVar()
+        self.var_searchTX = StringVar(value="Select")
+        self.var_search = StringVar()
+        self.selected_student_id = None
 
-        # backgorund image 
-        bg1 = Image.open(os.path.join(IMAGE_DIR, "bg3.jpg"))
-        bg1=bg1.resize((1366,768),Image.LANCZOS)
-        self.photobg1=ImageTk.PhotoImage(bg1)
+        # -------------------- ttk styles --------------------
+        style = ttk.Style()
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
 
-        # set image as lable
-        bg_img = Label(self.root,image=self.photobg1)
-        bg_img.place(x=0,y=90,width=1366,height=768)
+        style.configure(
+            "Modern.TEntry",
+            fieldbackground=WHITE,
+            background=WHITE,
+            foreground=TEXT,
+            bordercolor=BORDER,
+            lightcolor=BORDER,
+            darkcolor=BORDER,
+            padding=(10, 8),
+            font=("Segoe UI", 10),
+        )
+        style.map(
+            "Modern.TEntry",
+            bordercolor=[("focus", BLUE)],
+            lightcolor=[("focus", BLUE)],
+        )
 
-        # Creating Frame 
-        main_frame = Frame(bg_img,bd=2,bg="white") #bd mean border 
-        main_frame.place(x=5,y=0,width=1355,height=510)
+        style.configure(
+            "Modern.TCombobox",
+            fieldbackground=WHITE,
+            background=WHITE,
+            foreground=TEXT,
+            bordercolor=BORDER,
+            lightcolor=BORDER,
+            darkcolor=BORDER,
+            padding=(8, 7),
+            font=("Segoe UI", 10),
+        )
 
-        # Left Label Frame 
-        left_frame = LabelFrame(main_frame,bd=2,bg="white",relief=RIDGE,text="Student Details",font=("verdana",12,"bold"),fg="navyblue")
-        left_frame.place(x=10,y=10,width=660,height=480)
+        style.configure(
+            "Primary.TButton",
+            background=BLUE,
+            foreground=WHITE,
+            borderwidth=0,
+            focusthickness=0,
+            padding=(16, 9),
+            font=("Segoe UI", 10, "bold"),
+        )
+        style.map(
+            "Primary.TButton",
+            background=[("active", "#1D4ED8"), ("pressed", "#1E40AF")],
+            foreground=[("disabled", "#CBD5E1")],
+        )
 
-        # Current Course 
-        current_course_frame = LabelFrame(left_frame,bd=2,bg="white",relief=RIDGE,text="Current Course",font=("verdana",12,"bold"),fg="navyblue")
-        current_course_frame.place(x=10,y=5,width=635,height=150)
+        style.configure(
+            "Accent.TButton",
+            background=PINK,
+            foreground=WHITE,
+            borderwidth=0,
+            focusthickness=0,
+            padding=(16, 9),
+            font=("Segoe UI", 10, "bold"),
+        )
+        style.map(
+            "Accent.TButton",
+            background=[("active", "#DB2777"), ("pressed", "#BE185D")],
+        )
 
-        #label Department
-        dep_label=Label(current_course_frame,text="Department",font=("verdana",12,"bold"),bg="white",fg="navyblue")
-        dep_label.grid(row=0,column=0,padx=5,pady=15)
+        style.configure(
+            "Danger.TButton",
+            background=DANGER,
+            foreground=WHITE,
+            borderwidth=0,
+            focusthickness=0,
+            padding=(16, 9),
+            font=("Segoe UI", 10, "bold"),
+        )
+        style.map(
+            "Danger.TButton",
+            background=[("active", "#B91C1C"), ("pressed", "#991B1B")],
+        )
 
-        #combo box 
-        dep_combo=ttk.Combobox(current_course_frame,textvariable=self.var_dep,width=15,font=("verdana",12,"bold"),state="readonly")
-        dep_combo["values"]=("Select Department","CGPIT","AMTICS","SHRIMCA","SRCP","BMIIT")
-        dep_combo.current(0)
-        dep_combo.grid(row=0,column=1,padx=5,pady=15,sticky=W)
+        style.configure(
+            "Secondary.TButton",
+            background=WHITE,
+            foreground=TEXT,
+            borderwidth=1,
+            bordercolor=BORDER,
+            focusthickness=0,
+            padding=(16, 9),
+            font=("Segoe UI", 10, "bold"),
+        )
+        style.map(
+            "Secondary.TButton",
+            background=[("active", "#F8FAFC"), ("pressed", "#F1F5F9")],
+            bordercolor=[("focus", BLUE)],
+        )
 
-        # -----------------------------------------------------
+        style.configure(
+            "Modern.Treeview",
+            background=WHITE,
+            foreground=TEXT,
+            fieldbackground=WHITE,
+            bordercolor=BORDER,
+            rowheight=34,
+            font=("Segoe UI", 9),
+        )
+        style.map(
+            "Modern.Treeview",
+            background=[("selected", "#DBEAFE")],
+            foreground=[("selected", DARK_BLUE)],
+        )
+        style.configure(
+            "Modern.Treeview.Heading",
+            background=DARK_BLUE,
+            foreground=WHITE,
+            bordercolor=DARK_BLUE,
+            relief="flat",
+            padding=(8, 8),
+            font=("Segoe UI", 9, "bold"),
+        )
+        style.map(
+            "Modern.Treeview.Heading",
+            background=[("active", "#1E3A8A")],
+        )
 
-        #label Course
-        cou_label=Label(current_course_frame,text="Course",font=("verdana",12,"bold"),bg="white",fg="navyblue")
-        cou_label.grid(row=0,column=2,padx=5,pady=15)
+        # -------------------- Root layout --------------------
+        self.root.grid_rowconfigure(0, weight=0)
+        self.root.grid_rowconfigure(1, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
 
-        #combo box 
-        cou_combo=ttk.Combobox(current_course_frame,textvariable=self.var_course,width=15,font=("verdana",12,"bold"),state="readonly")
-        cou_combo["values"]=("Select Course","CSE","ME","CS","CE","IT")
-        cou_combo.current(0)
-        cou_combo.grid(row=0,column=3,padx=5,pady=15,sticky=W)
+        # -------------------- Header --------------------
+        header = Frame(self.root, bg=WHITE, height=82, bd=0)
+        header.grid(row=0, column=0, sticky="ew")
+        header.grid_columnconfigure(1, weight=1)
+        header.grid_columnconfigure(2, weight=0)
 
-        #-------------------------------------------------------------
+        brand_mark = Frame(
+            header,
+            bg=BLUE,
+            width=48,
+            height=48,
+            highlightthickness=0,
+        )
+        brand_mark.grid(row=0, column=0, padx=(24, 14), pady=17)
+        brand_mark.grid_propagate(False)
 
-        #label Year
-        year_label=Label(current_course_frame,text="Year",font=("verdana",12,"bold"),bg="white",fg="navyblue")
-        year_label.grid(row=1,column=0,padx=5,sticky=W)
+        Label(
+            brand_mark,
+            text="FR",
+            bg=BLUE,
+            fg=WHITE,
+            font=("Segoe UI", 14, "bold"),
+        ).place(relx=0.5, rely=0.5, anchor="center")
 
-        #combo box 
-        year_combo=ttk.Combobox(current_course_frame,textvariable=self.var_year,width=15,font=("verdana",12,"bold"),state="readonly")
-        year_combo["values"]=("Select Year","2018-22","2019-23","2020-24","2021-25","2022-26")
-        year_combo.current(0)
-        year_combo.grid(row=1,column=1,padx=5,pady=15,sticky=W)
+        brand_area = Frame(header, bg=WHITE)
+        brand_area.grid(row=0, column=1, sticky="ew", pady=13)
+        brand_area.grid_columnconfigure(0, weight=1)
 
-        #-----------------------------------------------------------------
+        Label(
+            brand_area,
+            text="Face Recognition Attendance System",
+            bg=WHITE,
+            fg=DARK_BLUE,
+            font=("Segoe UI", 18, "bold"),
+            anchor="w",
+        ).grid(row=0, column=0, sticky="w")
 
-        #label Semester 
-        year_label=Label(current_course_frame,text="Semester",font=("verdana",12,"bold"),bg="white",fg="navyblue")
-        year_label.grid(row=1,column=2,padx=5,sticky=W)
+        Label(
+            brand_area,
+            text="Student management",
+            bg=WHITE,
+            fg=MUTED,
+            font=("Segoe UI", 10),
+            anchor="w",
+        ).grid(row=1, column=0, sticky="w", pady=(2, 0))
 
-        #combo box 
-        year_combo=ttk.Combobox(current_course_frame,textvariable=self.var_semester,width=15,font=("verdana",12,"bold"),state="readonly")
-        year_combo["values"]=("Select Semester","Semester-1","Semester-2","Semester-3","Semester-4","Semester-5","Semester-6","Semester-7","Semester-8")
-        year_combo.current(0)
-        year_combo.grid(row=1,column=3,padx=5,pady=15,sticky=W)
+        ttk.Button(header, text="Back to Dashboard", command=self.go_back,
+                   style="Secondary.TButton").grid(
+                       row=0, column=2, padx=(10, 24), pady=19)
 
-        #Class Student Information
-        class_Student_frame = LabelFrame(left_frame,bd=2,bg="white",relief=RIDGE,text="Class Student Information",font=("verdana",12,"bold"),fg="navyblue")
-        class_Student_frame.place(x=10,y=160,width=635,height=230)
+        header_rule = Frame(self.root, bg=BORDER, height=1)
+        header_rule.grid(row=0, column=0, sticky="ews")
 
-        #Student id
-        studentId_label = Label(class_Student_frame,text="Std-ID:",font=("verdana",12,"bold"),fg="navyblue",bg="white")
-        studentId_label.grid(row=0,column=0,padx=5,pady=5,sticky=W)
+        # -------------------- Main content --------------------
+        content = Frame(self.root, bg=BG)
+        content.grid(row=1, column=0, sticky="nsew", padx=20, pady=18)
+        content.grid_rowconfigure(0, weight=1)
+        content.grid_columnconfigure(0, weight=4, uniform="content")
+        content.grid_columnconfigure(1, weight=6, uniform="content")
 
-        studentId_entry = ttk.Entry(class_Student_frame,textvariable=self.var_std_id,width=15,font=("verdana",12,"bold"))
-        studentId_entry.grid(row=0,column=1,padx=5,pady=5,sticky=W)
+        # Card helpers
+        def create_card(parent, row, column, padx=8, pady=0):
+            outer = Frame(parent, bg=BORDER, bd=0, highlightthickness=0)
+            outer.grid(
+                row=row,
+                column=column,
+                sticky="nsew",
+                padx=padx,
+                pady=pady,
+            )
+            inner = Frame(outer, bg=WHITE, bd=0, highlightthickness=0)
+            inner.pack(fill=BOTH, expand=True, padx=1, pady=1)
+            return inner
 
-        #Student name
-        student_name_label = Label(class_Student_frame,text="Std-Name:",font=("verdana",12,"bold"),fg="navyblue",bg="white")
-        student_name_label.grid(row=0,column=2,padx=5,pady=5,sticky=W)
+        # -------------------- Left side --------------------
+        left = Frame(content, bg=BG)
+        left.grid(row=0, column=0, sticky="nsew", padx=(0, 9))
+        left.grid_rowconfigure(1, weight=0)
+        left.grid_rowconfigure(2, weight=1)
+        left.grid_columnconfigure(0, weight=1)
 
-        student_name_entry = ttk.Entry(class_Student_frame,textvariable=self.var_std_name,width=15,font=("verdana",12,"bold"))
-        student_name_entry.grid(row=0,column=3,padx=5,pady=5,sticky=W)
+        title_card = create_card(left, 0, 0, padx=0, pady=(0, 12))
+        title_card.grid_columnconfigure(0, weight=1)
 
-        #Class Didvision
-        student_div_label = Label(class_Student_frame,text="Class Division:",font=("verdana",12,"bold"),fg="navyblue",bg="white")
-        student_div_label.grid(row=1,column=0,padx=5,pady=5,sticky=W)
+        title_text = Frame(title_card, bg=WHITE)
+        title_text.grid(row=0, column=0, sticky="ew", padx=22, pady=17)
+        title_text.grid_columnconfigure(0, weight=1)
 
-        div_combo=ttk.Combobox(class_Student_frame,textvariable=self.var_div,width=13,font=("verdana",12,"bold"),state="readonly")
-        div_combo["values"]=("select","A","B","C")
-        div_combo.current(0)
-        div_combo.grid(row=1,column=1,padx=5,pady=5,sticky=W)
+        Label(
+            title_text,
+            text="Student Information",
+            bg=WHITE,
+            fg=TEXT,
+            font=("Segoe UI", 15, "bold"),
+            anchor="w",
+        ).grid(row=0, column=0, sticky="w")
 
-        #Roll No
-        student_roll_label = Label(class_Student_frame,text="Roll-No:",font=("verdana",12,"bold"),fg="navyblue",bg="white")
-        student_roll_label.grid(row=1,column=2,padx=5,pady=5,sticky=W)
+        Label(
+            title_text,
+            text="Create and manage student profiles",
+            bg=WHITE,
+            fg=MUTED,
+            font=("Segoe UI", 9),
+            anchor="w",
+        ).grid(row=1, column=0, sticky="w", pady=(3, 0))
 
-        student_roll_entry = ttk.Entry(class_Student_frame,textvariable=self.var_roll,width=15,font=("verdana",12,"bold"))
-        student_roll_entry.grid(row=1,column=3,padx=5,pady=5,sticky=W)
+        # Course card
+        course_card = create_card(left, 1, 0, padx=0, pady=(0, 12))
+        course_card.grid_columnconfigure(0, weight=1)
 
-        #Gender
-        student_gender_label = Label(class_Student_frame,text="Gender:",font=("verdana",12,"bold"),fg="navyblue",bg="white")
-        student_gender_label.grid(row=2,column=0,padx=5,pady=5,sticky=W)
+        Label(
+            course_card,
+            text="CURRENT COURSE",
+            bg=WHITE,
+            fg=BLUE,
+            font=("Segoe UI", 9, "bold"),
+        ).grid(row=0, column=0, sticky="w", padx=18, pady=(16, 8))
 
-        #combo box 
-        gender_combo=ttk.Combobox(class_Student_frame,textvariable=self.var_gender,width=13,font=("verdana",12,"bold"),state="readonly")
-        gender_combo["values"]=("select","Male","Female","Others")
-        gender_combo.current(0)
-        gender_combo.grid(row=2,column=1,padx=5,pady=5,sticky=W)
+        current_course_frame = Frame(course_card, bg=WHITE)
+        current_course_frame.grid(row=1, column=0, sticky="ew", padx=18, pady=(0, 16))
+        for col in range(4):
+            current_course_frame.grid_columnconfigure(col, weight=1, uniform="course")
 
-        #Date of Birth
-        student_dob_label = Label(class_Student_frame,text="DOB:",font=("verdana",12,"bold"),fg="navyblue",bg="white")
-        student_dob_label.grid(row=2,column=2,padx=5,pady=5,sticky=W)
+        course_fields = [
+            ("Department", self.var_dep, ("Select Department", "CGPIT", "AMTICS", "SHRIMCA", "SRCP", "BMIIT"), 0),
+            ("Course", self.var_course, ("Select Course", "CSE", "ME", "CS", "CE", "IT"), 1),
+            ("Year", self.var_year, ("Select Year", "2018-22", "2019-23", "2020-24", "2021-25", "2022-26"), 2),
+            ("Semester", self.var_semester, ("Select Semester", "Semester-1", "Semester-2", "Semester-3", "Semester-4", "Semester-5", "Semester-6", "Semester-7", "Semester-8"), 3),
+        ]
 
-        student_dob_entry = ttk.Entry(class_Student_frame,textvariable=self.var_dob,width=15,font=("verdana",12,"bold"))
-        student_dob_entry.grid(row=2,column=3,padx=5,pady=5,sticky=W)
+        for label_text, variable, values, col in course_fields:
+            field = Frame(current_course_frame, bg=WHITE)
+            field.grid(row=0, column=col, sticky="ew", padx=(0 if col == 0 else 8, 0))
+            field.grid_columnconfigure(0, weight=1)
 
-        #Email
-        student_email_label = Label(class_Student_frame,text="Email:",font=("verdana",12,"bold"),fg="navyblue",bg="white")
-        student_email_label.grid(row=3,column=0,padx=5,pady=5,sticky=W)
+            Label(
+                field,
+                text=label_text,
+                bg=WHITE,
+                fg=TEXT,
+                font=("Segoe UI", 9, "bold"),
+                anchor="w",
+            ).grid(row=0, column=0, sticky="w", pady=(0, 5))
 
-        student_email_entry = ttk.Entry(class_Student_frame,textvariable=self.var_email,width=15,font=("verdana",12,"bold"))
-        student_email_entry.grid(row=3,column=1,padx=5,pady=5,sticky=W)
+            combo = ttk.Combobox(
+                field,
+                textvariable=variable,
+                values=values,
+                state="readonly",
+                style="Modern.TCombobox",
+            )
+            combo.grid(row=1, column=0, sticky="ew")
+            combo.current(0)
 
-        #Phone Number
-        student_mob_label = Label(class_Student_frame,text="Mob-No:",font=("verdana",12,"bold"),fg="navyblue",bg="white")
-        student_mob_label.grid(row=3,column=2,padx=5,pady=5,sticky=W)
+        # Details card
+        details_card = create_card(left, 2, 0, padx=0, pady=0)
+        details_card.grid_rowconfigure(1, weight=1)
+        details_card.grid_columnconfigure(0, weight=1)
 
-        student_mob_entry = ttk.Entry(class_Student_frame,textvariable=self.var_mob,width=15,font=("verdana",12,"bold"))
-        student_mob_entry.grid(row=3,column=3,padx=5,pady=5,sticky=W)
+        Label(
+            details_card,
+            text="STUDENT DETAILS",
+            bg=WHITE,
+            fg=BLUE,
+            font=("Segoe UI", 9, "bold"),
+        ).grid(row=0, column=0, sticky="w", padx=18, pady=(16, 8))
 
-        #Address
-        student_address_label = Label(class_Student_frame,text="Address:",font=("verdana",12,"bold"),fg="navyblue",bg="white")
-        student_address_label.grid(row=4,column=0,padx=5,pady=5,sticky=W)
+        form = Frame(details_card, bg=WHITE)
+        form.grid(row=1, column=0, sticky="nsew", padx=18)
+        for col in range(4):
+            form.grid_columnconfigure(col, weight=1, uniform="details")
 
-        student_address_entry = ttk.Entry(class_Student_frame,textvariable=self.var_address,width=15,font=("verdana",12,"bold"))
-        student_address_entry.grid(row=4,column=1,padx=5,pady=5,sticky=W)
+        fields = [
+            ("Student ID", self.var_std_id, 0, 0),
+            ("Student Name", self.var_std_name, 0, 2),
+            ("Class Division", self.var_div, 1, 0),
+            ("Roll No", self.var_roll, 1, 2),
+            ("Gender", self.var_gender, 2, 0),
+            ("Date of Birth", self.var_dob, 2, 2),
+            ("Email", self.var_email, 3, 0),
+            ("Mobile No", self.var_mob, 3, 2),
+            ("Address", self.var_address, 4, 0),
+            ("Tutor Name", self.var_teacher, 4, 2),
+        ]
 
-        #Teacher Name
-        student_tutor_label = Label(class_Student_frame,text="Tutor Name:",font=("verdana",12,"bold"),fg="navyblue",bg="white")
-        student_tutor_label.grid(row=4,column=2,padx=5,pady=5,sticky=W)
+        def add_entry(parent, label_text, variable, row, col, combo_values=None):
+            block = Frame(parent, bg=WHITE)
+            block.grid(row=row, column=col, sticky="ew", padx=(0 if col == 0 else 8, 8), pady=(0, 10))
+            block.grid_columnconfigure(0, weight=1)
 
-        student_tutor_entry = ttk.Entry(class_Student_frame,textvariable=self.var_teacher,width=15,font=("verdana",12,"bold"))
-        student_tutor_entry.grid(row=4,column=3,padx=5,pady=5,sticky=W)
+            Label(
+                block,
+                text=label_text,
+                bg=WHITE,
+                fg=TEXT,
+                font=("Segoe UI", 9, "bold"),
+                anchor="w",
+            ).grid(row=0, column=0, sticky="w", pady=(0, 5))
 
-        #Radio Buttons
-        self.var_radio1=StringVar()
-        radiobtn1=ttk.Radiobutton(class_Student_frame,text="Take Photo Sample",variable=self.var_radio1,value="Yes")
-        radiobtn1.grid(row=5,column=0,padx=5,pady=5,sticky=W)
+            if combo_values is not None:
+                widget = ttk.Combobox(
+                    block,
+                    textvariable=variable,
+                    values=combo_values,
+                    state="readonly",
+                    style="Modern.TCombobox",
+                )
+                widget.current(0)
+            elif label_text == "Date of Birth":
+                date_field = Frame(block, bg=WHITE)
+                date_field.grid(row=1, column=0, sticky="ew")
+                date_field.grid_columnconfigure(0, weight=1)
+                widget = ttk.Entry(date_field, textvariable=variable, style="Modern.TEntry")
+                widget.grid(row=0, column=0, sticky="ew")
+                ttk.Button(date_field, text="\U0001F4C5", command=self.choose_birth_date,
+                           style="Secondary.TButton", width=3).grid(row=0, column=1, padx=(5, 0))
+                return widget
+            elif label_text == "Tutor Name":
+                widget = ttk.Entry(
+                    block,
+                    textvariable=variable,
+                    style="Modern.TEntry",
+                    state="readonly",
+                )
+            else:
+                widget = ttk.Entry(block, textvariable=variable, style="Modern.TEntry")
 
-        radiobtn1=ttk.Radiobutton(class_Student_frame,text="No Photo Sample",variable=self.var_radio1,value="No")
-        radiobtn1.grid(row=5,column=1,padx=5,pady=5,sticky=W)
+            widget.grid(row=1, column=0, sticky="ew")
+            return widget
 
-        #Button Frame
-        btn_frame = Frame(left_frame,bd=2,bg="white",relief=RIDGE)
-        btn_frame.place(x=10,y=390,width=635,height=60)
+        for label_text, variable, row, col in fields:
+            if label_text == "Class Division":
+                add_entry(form, label_text, variable, row, col, ("select", "A", "B", "C"))
+            elif label_text == "Gender":
+                add_entry(form, label_text, variable, row, col, ("select", "Male", "Female", "Others"))
+            else:
+                add_entry(form, label_text, variable, row, col)
 
-        #save button
-        save_btn=Button(btn_frame,command=self.add_data,text="Save",width=7,font=("verdana",12,"bold"),fg="white",bg="navyblue")
-        save_btn.grid(row=0,column=0,padx=5,pady=10,sticky=W)
+        # Radio buttons
+        photo_row = Frame(form, bg=WHITE)
+        photo_row.grid(row=5, column=0, columnspan=4, sticky="w", pady=(1, 8))
 
-        #update button
-        update_btn=Button(btn_frame,command=self.update_data,text="Update",width=7,font=("verdana",12,"bold"),fg="white",bg="navyblue")
-        update_btn.grid(row=0,column=1,padx=5,pady=8,sticky=W)
+        Label(
+            photo_row,
+            text="Photo Sample",
+            bg=WHITE,
+            fg=TEXT,
+            font=("Segoe UI", 9, "bold"),
+        ).pack(side=LEFT, padx=(0, 14))
 
-        #delete button
-        del_btn=Button(btn_frame,command=self.delete_data,text="Delete",width=7,font=("verdana",12,"bold"),fg="white",bg="navyblue")
-        del_btn.grid(row=0,column=2,padx=5,pady=10,sticky=W)
+        ttk.Radiobutton(
+            photo_row,
+            text="Take Photo Sample",
+            variable=self.var_radio1,
+            value="Yes",
+        ).pack(side=LEFT, padx=(0, 14))
 
-        #reset button
-        reset_btn=Button(btn_frame,command=self.reset_data,text="Reset",width=7,font=("verdana",12,"bold"),fg="white",bg="navyblue")
-        reset_btn.grid(row=0,column=3,padx=5,pady=10,sticky=W)
+        ttk.Radiobutton(
+            photo_row,
+            text="No Photo Sample",
+            variable=self.var_radio1,
+            value="No",
+        ).pack(side=LEFT)
 
-        #take photo button
-        take_photo_btn=Button(btn_frame,command=self.generate_dataset,text="Take Pic",width=9,font=("verdana",12,"bold"),fg="white",bg="navyblue")
-        take_photo_btn.grid(row=0,column=4,padx=5,pady=10,sticky=W)
+        # Action buttons
+        button_bar = Frame(details_card, bg=WHITE)
+        button_bar.grid(row=2, column=0, sticky="ew", padx=18, pady=(8, 18))
+        for col in range(3):
+            button_bar.grid_columnconfigure(col, weight=1, uniform="actions")
 
-        #update photo button
-        update_photo_btn=Button(btn_frame,text="Update Pic",width=9,font=("verdana",12,"bold"),fg="white",bg="navyblue")
-        update_photo_btn.grid(row=0,column=5,padx=5,pady=10,sticky=W)
+        ttk.Button(
+            button_bar,
+            text="Save",
+            command=self.add_data,
+            style="Primary.TButton",
+        ).grid(row=0, column=0, sticky="ew", padx=(0, 6))
 
+        ttk.Button(
+            button_bar,
+            text="Reset",
+            command=self.reset_data,
+            style="Secondary.TButton",
+        ).grid(row=0, column=1, sticky="ew", padx=6)
 
+        ttk.Button(
+            button_bar,
+            text="Take Photo",
+            command=self.generate_dataset,
+            style="Accent.TButton",
+        ).grid(row=0, column=2, sticky="ew", padx=6)
 
+        # -------------------- Right side --------------------
+        right = Frame(content, bg=BG)
+        right.grid(row=0, column=1, sticky="nsew", padx=(9, 0))
+        right.grid_rowconfigure(1, weight=1)
+        right.grid_rowconfigure(2, weight=0)
+        right.grid_columnconfigure(0, weight=1)
 
+        search_card = create_card(right, 0, 0, padx=0, pady=(0, 12))
+        search_card.grid_columnconfigure(1, weight=1)
 
-        #----------------------------------------------------------------------
-        # Right Label Frame 
-        right_frame = LabelFrame(main_frame,bd=2,bg="white",relief=RIDGE,text="Student Details",font=("verdana",12,"bold"),fg="navyblue")
-        right_frame.place(x=680,y=10,width=660,height=480)
+        Label(
+            search_card,
+            text="SEARCH STUDENTS",
+            bg=WHITE,
+            fg=BLUE,
+            font=("Segoe UI", 9, "bold"),
+        ).grid(row=0, column=0, columnspan=5, sticky="w", padx=18, pady=(14, 8))
 
-        #Searching System in Right Label Frame 
-        search_frame = LabelFrame(right_frame,bd=2,bg="white",relief=RIDGE,text="Search System",font=("verdana",12,"bold"),fg="navyblue")
-        search_frame.place(x=10,y=5,width=635,height=80)
-
-        #Phone Number
-        search_label = Label(search_frame,text="Search:",font=("verdana",12,"bold"),fg="navyblue",bg="white")
-        search_label.grid(row=0,column=0,padx=5,pady=5,sticky=W)
-        self.var_searchTX=StringVar()
-        #combo box 
-        search_combo=ttk.Combobox(search_frame,textvariable=self.var_searchTX,width=12,font=("verdana",12,"bold"),state="readonly")
-        search_combo["values"]=("Select","Roll-No","Name")
+        search_combo = ttk.Combobox(
+            search_card,
+            textvariable=self.var_searchTX,
+            values=("Select", "Date", "Roll-No", "Student ID", "Name"),
+            state="readonly",
+            style="Modern.TCombobox",
+            width=14,
+        )
+        search_combo.grid(row=1, column=0, padx=(18, 8), pady=(0, 14))
         search_combo.current(0)
-        search_combo.grid(row=0,column=1,padx=5,pady=15,sticky=W)
+        search_combo.bind("<<ComboboxSelected>>", self.update_search_controls)
 
-        self.var_search=StringVar()
-        search_entry = ttk.Entry(search_frame,textvariable=self.var_search,width=10,font=("verdana",12,"bold"))
-        search_entry.grid(row=0,column=2,padx=5,pady=5,sticky=W)
+        search_entry = ttk.Entry(
+            search_card,
+            textvariable=self.var_search,
+            style="Modern.TEntry",
+        )
+        search_entry.grid(row=1, column=1, sticky="ew", padx=8, pady=(0, 14))
 
-        search_btn=Button(search_frame,command=self.search_data,text="Search",width=7,font=("verdana",12,"bold"),fg="white",bg="navyblue")
-        search_btn.grid(row=0,column=3,padx=5,pady=10,sticky=W)
+        self.search_date_button = ttk.Button(
+            search_card, text="\U0001F4C5", command=self.choose_search_date,
+            style="Secondary.TButton")
+        self.search_date_button.grid(row=1, column=2, padx=(0, 6), pady=(0, 14))
+        self.search_date_button.grid_remove()
 
-        showAll_btn=Button(search_frame,command=self.fetch_data,text="Show All",width=8,font=("verdana",12,"bold"),fg="white",bg="navyblue")
-        showAll_btn.grid(row=0,column=4,padx=5,pady=10,sticky=W)
+        ttk.Button(
+            search_card,
+            text="Search",
+            command=self.search_data,
+            style="Primary.TButton",
+        ).grid(row=1, column=3, padx=8, pady=(0, 14))
 
-        # -----------------------------Table Frame-------------------------------------------------
-        #Table Frame 
-        #Searching System in Right Label Frame 
-        table_frame = Frame(right_frame,bd=2,bg="white",relief=RIDGE)
-        table_frame.place(x=10,y=90,width=635,height=360)
+        ttk.Button(
+            search_card,
+            text="Show All",
+            command=self.fetch_data,
+            style="Secondary.TButton",
+        ).grid(row=1, column=4, padx=(8, 18), pady=(0, 14))
 
-        #scroll bar 
-        scroll_x = ttk.Scrollbar(table_frame,orient=HORIZONTAL)
-        scroll_y = ttk.Scrollbar(table_frame,orient=VERTICAL)
+        table_card = create_card(right, 1, 0, padx=0, pady=0)
+        table_card.grid_rowconfigure(1, weight=1)
+        table_card.grid_columnconfigure(0, weight=1)
 
-        #create table 
-        self.student_table = ttk.Treeview(table_frame,column=("ID","Name","Dep","Course","Year","Sem","Div","Gender","DOB","Mob-No","Address","Roll-No","Email","Teacher","Photo"),xscrollcommand=scroll_x.set,yscrollcommand=scroll_y.set)
+        table_title = Frame(table_card, bg=WHITE)
+        table_title.grid(row=0, column=0, sticky="ew", padx=18, pady=(14, 10))
 
-        scroll_x.pack(side=BOTTOM,fill=X)
-        scroll_y.pack(side=RIGHT,fill=Y)
+        Label(
+            table_title,
+            text="STUDENT RECORDS",
+            bg=WHITE,
+            fg=TEXT,
+            font=("Segoe UI", 11, "bold"),
+            anchor="w",
+        ).pack(side=LEFT)
+
+        Label(
+            table_title,
+            text="Click a row to load its details",
+            bg=WHITE,
+            fg=MUTED,
+            font=("Segoe UI", 9),
+        ).pack(side=RIGHT)
+
+        table_area = Frame(table_card, bg=WHITE)
+        table_area.grid(row=1, column=0, sticky="nsew", padx=(18, 18), pady=(0, 18))
+        table_area.grid_rowconfigure(0, weight=1)
+        table_area.grid_columnconfigure(0, weight=1)
+
+        scroll_x = ttk.Scrollbar(table_area, orient=HORIZONTAL)
+        scroll_y = ttk.Scrollbar(table_area, orient=VERTICAL)
+
+        columns = (
+            "ID",
+            "Name",
+            "Dep",
+            "Course",
+            "Year",
+            "Sem",
+            "Div",
+            "Gender",
+            "DOB",
+            "Mob-No",
+            "Address",
+            "Roll-No",
+            "Email",
+            "Teacher",
+            "Photo",
+        )
+
+        self.student_table = ttk.Treeview(
+            table_area,
+            columns=columns,
+            show="headings",
+            xscrollcommand=scroll_x.set,
+            yscrollcommand=scroll_y.set,
+            style="Modern.Treeview",
+        )
+
+        scroll_x.grid(row=1, column=0, sticky="ew")
+        scroll_y.grid(row=0, column=1, sticky="ns")
+
         scroll_x.config(command=self.student_table.xview)
         scroll_y.config(command=self.student_table.yview)
 
-        self.student_table.heading("ID",text="StudentID")
-        self.student_table.heading("Name",text="Name")
-        self.student_table.heading("Dep",text="Department")
-        self.student_table.heading("Course",text="Course")
-        self.student_table.heading("Year",text="Year")
-        self.student_table.heading("Sem",text="Semester")
-        self.student_table.heading("Div",text="Division")
-        self.student_table.heading("Gender",text="Gender")
-        self.student_table.heading("DOB",text="DOB")
-        self.student_table.heading("Mob-No",text="Mob-No")
-        self.student_table.heading("Address",text="Address")
-        self.student_table.heading("Roll-No",text="Roll-No")
-        self.student_table.heading("Email",text="Email")
-        self.student_table.heading("Teacher",text="Teacher")
-        self.student_table.heading("Photo",text="PhotoSample")
-        self.student_table["show"]="headings"
+        self.student_table.grid(row=0, column=0, sticky="nsew")
+        self.student_table.bind("<ButtonRelease>", self.get_cursor)
 
+        headings = {
+            "ID": "Student ID",
+            "Name": "Name",
+            "Dep": "Department",
+            "Course": "Course",
+            "Year": "Year",
+            "Sem": "Semester",
+            "Div": "Division",
+            "Gender": "Gender",
+            "DOB": "DOB",
+            "Mob-No": "Mobile No",
+            "Address": "Address",
+            "Roll-No": "Roll No",
+            "Email": "Email",
+            "Teacher": "Teacher",
+            "Photo": "Photo Sample",
+        }
 
-        # Set Width of Colums 
-        self.student_table.column("ID",width=100)
-        self.student_table.column("Name",width=100)
-        self.student_table.column("Dep",width=100)
-        self.student_table.column("Course",width=100)
-        self.student_table.column("Year",width=100)
-        self.student_table.column("Sem",width=100)
-        self.student_table.column("Div",width=100)
-        self.student_table.column("Gender",width=100)
-        self.student_table.column("DOB",width=100)
-        self.student_table.column("Mob-No",width=100)
-        self.student_table.column("Address",width=100)
-        self.student_table.column("Roll-No",width=100)
-        self.student_table.column("Email",width=100)
-        self.student_table.column("Teacher",width=100)
-        self.student_table.column("Photo",width=100)
+        widths = {
+            "ID": 100,
+            "Name": 140,
+            "Dep": 125,
+            "Course": 110,
+            "Year": 105,
+            "Sem": 110,
+            "Div": 90,
+            "Gender": 95,
+            "DOB": 105,
+            "Mob-No": 120,
+            "Address": 180,
+            "Roll-No": 105,
+            "Email": 190,
+            "Teacher": 140,
+            "Photo": 115,
+        }
 
+        for column in columns:
+            self.student_table.heading(column, text=headings[column])
+            self.student_table.column(column, width=widths[column], minwidth=80, stretch=False)
 
-        self.student_table.pack(fill=BOTH,expand=1)
-        self.student_table.bind("<ButtonRelease>",self.get_cursor)
+        record_actions = Frame(right, bg=WHITE, highlightbackground=BORDER, highlightthickness=1)
+        record_actions.grid(row=2, column=0, sticky="ew", pady=(12, 0))
+        record_actions.grid_columnconfigure(0, weight=1)
+        record_actions.grid_columnconfigure(1, weight=1)
+        ttk.Button(record_actions, text="Update Record", command=self.update_data,
+                   style="Primary.TButton").grid(row=0, column=0, sticky="ew", padx=(18, 6), pady=14)
+        ttk.Button(record_actions, text="Delete Record", command=self.delete_data,
+                   style="Danger.TButton").grid(row=0, column=1, sticky="ew", padx=(6, 18), pady=14)
+
+        # Load existing records exactly as before
         self.fetch_data()
+
+    def go_back(self):
+        self.root.destroy()
+
+    def choose_birth_date(self):
+        self._choose_date(self.var_dob, "Select date of birth")
+
+    def choose_search_date(self):
+        self.var_searchTX.set("Date")
+        self.update_search_controls()
+        self._choose_date(self.var_search, "Select search date")
+
+    def update_search_controls(self, event=None):
+        if self.var_searchTX.get() == "Date":
+            self.search_date_button.grid()
+        else:
+            self.search_date_button.grid_remove()
+
+    def _choose_date(self, target, title):
+        picker = Toplevel(self.root)
+        picker.title(title)
+        picker.transient(self.root)
+        picker.grab_set()
+        now = datetime.now()
+        month = IntVar(value=now.month)
+        year = IntVar(value=now.year)
+        body = Frame(picker)
+        body.pack(padx=8, pady=8)
+
+        def render():
+            for child in body.winfo_children():
+                child.destroy()
+            Label(body, text=f"{calendar.month_name[month.get()]} {year.get()}",
+                  font=("Segoe UI", 11, "bold")).grid(row=0, column=0, columnspan=7, pady=8)
+            for column, name in enumerate(("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su")):
+                Label(body, text=name, width=4, fg="#64748B").grid(row=1, column=column)
+            for index, week in enumerate(calendar.monthcalendar(year.get(), month.get())):
+                for column, day in enumerate(week):
+                    if day:
+                        Button(body, text=str(day), width=3, relief="flat",
+                               command=lambda day=day: select_day(day)).grid(
+                                   row=2 + index, column=column, padx=1, pady=1)
+
+        def select_day(day):
+            target.set(f"{day:02d}-{month.get():02d}-{year.get()}")
+            picker.destroy()
+
+        def change_month(offset):
+            value = month.get() + offset
+            if value < 1:
+                month.set(12)
+                year.set(year.get() - 1)
+            elif value > 12:
+                month.set(1)
+                year.set(year.get() + 1)
+            else:
+                month.set(value)
+            render()
+
+        controls = Frame(picker)
+        controls.pack(fill=X, padx=8, pady=(8, 0))
+        Button(controls, text="<", command=lambda: change_month(-1)).pack(side=LEFT)
+        Button(controls, text=">", command=lambda: change_month(1)).pack(side=RIGHT)
+        render()
+
+
 # ==================Function Decleration==============================
     def add_data(self):
         if self.var_dep.get()=="Select Department" or self.var_course.get=="Select Course" or self.var_year.get()=="Select Year" or self.var_semester.get()=="Select Semester" or self.var_std_id.get()=="" or self.var_std_name.get()=="" or self.var_div.get()=="" or self.var_roll.get()=="" or self.var_gender.get()=="" or self.var_dob.get()=="" or self.var_email.get()=="" or self.var_mob.get()=="" or self.var_address.get()=="" or self.var_teacher.get()=="":
             messagebox.showerror("Error","Please Fill All Fields are Required!",parent=self.root)
         else:
             try:
+                if self.var_radio1.get() == "Yes":
+                    self.capture_face_samples(self.var_std_id.get())
                 conn = mysql.connector.connect(**DB_CONFIG)
                 mycursor = conn.cursor()
-                mycursor.execute("insert into student values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",(
+                mycursor.execute("insert into student (Student_ID,Name,Department,Course,Year,Semester,Division,Gender,DOB,Mobile_No,Address,Roll_No,Email,Teacher_Name,PhotoSample,Owner_Email) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",(
                 self.var_std_id.get(),
                 self.var_std_name.get(),
                 self.var_dep.get(),
@@ -347,7 +753,8 @@ class Student:
                 self.var_roll.get(),
                 self.var_email.get(),
                 self.var_teacher.get(),
-                self.var_radio1.get()
+                self.var_radio1.get(),
+                self.owner_email,
                 ))
 
                 conn.commit()
@@ -363,14 +770,12 @@ class Student:
         conn = mysql.connector.connect(**DB_CONFIG)
         mycursor = conn.cursor()
 
-        mycursor.execute("select * from student")
+        mycursor.execute("select Student_ID,Name,Department,Course,Year,Semester,Division,Gender,DOB,Mobile_No,Address,Roll_No,Email,Teacher_Name,PhotoSample from student where Owner_Email=%s", (self.owner_email,))
         data=mycursor.fetchall()
 
-        if len(data)!= 0:
-            self.student_table.delete(*self.student_table.get_children())
-            for i in data:
-                self.student_table.insert("",END,values=i)
-            conn.commit()
+        self.student_table.delete(*self.student_table.get_children())
+        for i in data:
+            self.student_table.insert("",END,values=i)
         conn.close()
 
     #================================get cursor function=======================
@@ -379,6 +784,9 @@ class Student:
         cursor_focus = self.student_table.focus()
         content = self.student_table.item(cursor_focus)
         data = content["values"]
+
+        if len(data) < 15:
+            return
 
         self.var_std_id.set(data[0]),
         self.var_std_name.set(data[1]),
@@ -395,6 +803,7 @@ class Student:
         self.var_email.set(data[12]),
         self.var_teacher.set(data[13]),
         self.var_radio1.set(data[14])
+        self.selected_student_id = data[0]
     # ========================================Update Function==========================
     def update_data(self):
         if self.var_dep.get()=="Select Department" or self.var_course.get=="Select Course" or self.var_year.get()=="Select Year" or self.var_semester.get()=="Select Semester" or self.var_std_id.get()=="" or self.var_std_name.get()=="" or self.var_div.get()=="" or self.var_roll.get()=="" or self.var_gender.get()=="" or self.var_dob.get()=="" or self.var_email.get()=="" or self.var_mob.get()=="" or self.var_address.get()=="" or self.var_teacher.get()=="":
@@ -405,7 +814,7 @@ class Student:
                 if Update > 0:
                     conn = mysql.connector.connect(**DB_CONFIG)
                     mycursor = conn.cursor()
-                    mycursor.execute("update student set Name=%s,Department=%s,Course=%s,Year=%s,Semester=%s,Division=%s,Gender=%s,DOB=%s,Mobile_No=%s,Address=%s,Roll_No=%s,Email=%s,Teacher_Name=%s,PhotoSample=%s where Student_ID=%s",( 
+                    mycursor.execute("update student set Name=%s,Department=%s,Course=%s,Year=%s,Semester=%s,Division=%s,Gender=%s,DOB=%s,Mobile_No=%s,Address=%s,Roll_No=%s,Email=%s,Teacher_Name=%s,PhotoSample=%s where Student_ID=%s and Owner_Email=%s",( 
                     self.var_std_name.get(),
                     self.var_dep.get(),
                     self.var_course.get(),
@@ -420,11 +829,14 @@ class Student:
                     self.var_email.get(),
                     self.var_teacher.get(),
                     self.var_radio1.get(),
-                    self.var_std_id.get()   
+                    self.var_std_id.get(),
+                    self.owner_email,
                     ))
                 else:
                     if not Update:
                         return
+                if self.var_radio1.get() == "Yes":
+                    self.capture_face_samples(self.var_std_id.get())
                 messagebox.showinfo("Success","Successfully Updated!",parent=self.root)
                 conn.commit()
                 self.fetch_data()
@@ -434,27 +846,44 @@ class Student:
     
     #==============================Delete Function=========================================
     def delete_data(self):
-        if self.var_std_id.get()=="":
-            messagebox.showerror("Error","Student Id Must be Required!",parent=self.root)
-        else:
-            try:
-                delete=messagebox.askyesno("Delete","Do you want to Delete?",parent=self.root)
-                if delete>0:
-                    conn = mysql.connector.connect(**DB_CONFIG)
-                    mycursor = conn.cursor() 
-                    sql="delete from student where Student_ID=%s"
-                    val=(self.var_std_id.get(),)
-                    mycursor.execute(sql,val)
-                else:
-                    if not delete:
-                        return
+        selected = self.student_table.selection()
+        student_id = None
+        if selected:
+            values = self.student_table.item(selected[0], "values")
+            if values:
+                student_id = values[0]
+        if not student_id:
+            student_id = self.selected_student_id or self.var_std_id.get()
+        if not student_id:
+            messagebox.showerror("Error", "Select a student record first.", parent=self.root)
+            return
 
-                conn.commit()
-                self.fetch_data()
-                conn.close()
-                messagebox.showinfo("Delete","Successfully Deleted!",parent=self.root)
-            except Exception as es:
-                messagebox.showerror("Error",f"Due to: {str(es)}",parent=self.root)    
+        if not messagebox.askyesno("Delete", "Do you want to delete this student?", parent=self.root):
+            return
+
+        try:
+            conn = mysql.connector.connect(**DB_CONFIG)
+            cursor = conn.cursor()
+            cursor.execute(
+                "DELETE FROM student WHERE Student_ID=%s AND Owner_Email=%s",
+                (student_id, self.owner_email),
+            )
+            deleted = cursor.rowcount
+            conn.commit()
+            cursor.close()
+            conn.close()
+            if deleted == 0:
+                messagebox.showwarning(
+                    "Not deleted",
+                    "The selected student was not found for this account.",
+                    parent=self.root,
+                )
+                return
+            self.fetch_data()
+            self.reset_data()
+            messagebox.showinfo("Delete", "Student deleted successfully.", parent=self.root)
+        except Exception as error:
+            messagebox.showerror("Error", f"Due to: {error}", parent=self.root)
 
     # Reset Function 
     def reset_data(self):
@@ -471,7 +900,7 @@ class Student:
         self.var_address.set(""),
         self.var_roll.set(""),
         self.var_email.set(""),
-        self.var_teacher.set(""),
+        self.var_teacher.set(self.owner_name),
         self.var_radio1.set("")
     
     # ===========================Search Data===================
@@ -482,8 +911,20 @@ class Student:
             try:
                 conn = mysql.connector.connect(**DB_CONFIG)
                 my_cursor = conn.cursor()
-                sql = "SELECT Student_ID,Name,Department,Course,Year,Semester,Division,Gender,DOB,Mobile_No,Address,Roll_No,Email,Teacher_Name,PhotoSample FROM student where Roll_No='" +str(self.var_search.get()) + "'" 
-                my_cursor.execute(sql)
+                search_columns = {
+                    "Date": "DOB",
+                    "Roll-No": "Roll_No",
+                    "Student ID": "Student_ID",
+                    "Name": "Name",
+                }
+                search_column = search_columns[self.var_searchTX.get()]
+                search_value = self.var_search.get().strip()
+                if self.var_searchTX.get() == "Date":
+                    sql = f"SELECT Student_ID,Name,Department,Course,Year,Semester,Division,Gender,DOB,Mobile_No,Address,Roll_No,Email,Teacher_Name,PhotoSample FROM student WHERE {search_column} IN (%s, %s) AND Owner_Email=%s"
+                    my_cursor.execute(sql, (search_value, search_value.replace("-", "/"), self.owner_email))
+                else:
+                    sql = f"SELECT Student_ID,Name,Department,Course,Year,Semester,Division,Gender,DOB,Mobile_No,Address,Roll_No,Email,Teacher_Name,PhotoSample FROM student WHERE {search_column}=%s AND Owner_Email=%s"
+                    my_cursor.execute(sql, (search_value, self.owner_email))
                 # my_cursor.execute("select * from student where Roll_No= " +str(self.var_search.get())+" "+str(self.var_searchTX.get())+"")
                 rows=my_cursor.fetchall()        
                 if len(rows)!=0:
@@ -501,74 +942,50 @@ class Student:
 #=====================This part is related to Opencv Camera part=======================
 # ==================================Generate Data set take image=========================
     def generate_dataset(self):
-        if self.var_dep.get()=="Select Department" or self.var_course.get=="Select Course" or self.var_year.get()=="Select Year" or self.var_semester.get()=="Select Semester" or self.var_std_id.get()=="" or self.var_std_name.get()=="" or self.var_div.get()=="" or self.var_roll.get()=="" or self.var_gender.get()=="" or self.var_dob.get()=="" or self.var_email.get()=="" or self.var_mob.get()=="" or self.var_address.get()=="" or self.var_teacher.get()=="":
-            messagebox.showerror("Error","Please Fill All Fields are Required!",parent=self.root)
-        else:
-            try:
-                
-                conn = mysql.connector.connect(**DB_CONFIG)
-                mycursor = conn.cursor()
-                mycursor.execute("select * from student")
-                myreslut = mycursor.fetchall()
-                id=0
-                for x in myreslut:
-                    id+=1
+        if self.var_std_id.get() == "":
+            messagebox.showerror("Error", "Select or save a student before taking photos.", parent=self.root)
+            return
+        try:
+            self.capture_face_samples(self.var_std_id.get())
+            self.var_radio1.set("Yes")
+            messagebox.showinfo("Result", "Face samples captured successfully.", parent=self.root)
+        except Exception as error:
+            messagebox.showerror("Camera error", str(error), parent=self.root)
 
-                mycursor.execute("update student set Name=%s,Department=%s,Course=%s,Year=%s,Semester=%s,Division=%s,Gender=%s,DOB=%s,Mobile_No=%s,Address=%s,Roll_No=%s,Email=%s,Teacher_Name=%s,PhotoSample=%s where Student_ID=%s",( 
-                    self.var_std_name.get(),
-                    self.var_dep.get(),
-                    self.var_course.get(),
-                    self.var_year.get(),
-                    self.var_semester.get(),
-                    self.var_div.get(),
-                    self.var_gender.get(),
-                    self.var_dob.get(),
-                    self.var_mob.get(),
-                    self.var_address.get(),
-                    self.var_roll.get(),
-                    self.var_email.get(),
-                    self.var_teacher.get(),
-                    self.var_radio1.get(),
-                    self.var_std_id.get()==id+1   
-                    ))
-                conn.commit()
-                self.fetch_data()
-                self.reset_data()
-                conn.close()
+    def capture_face_samples(self, student_id):
+        detector = cv2.CascadeClassifier(
+            os.path.join(BASE_DIR, "haarcascade_frontalface_default.xml")
+        )
+        if detector.empty():
+            raise RuntimeError("Face detector file could not be loaded.")
+        camera = cv2.VideoCapture(0)
+        if not camera.isOpened():
+            raise RuntimeError("Camera could not be opened.")
 
-                # ====================part of opencv=======================
-
-                face_classifier = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
-
-                def face_croped(img):
-                    # conver gary sacle
-                    gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-                    faces = face_classifier.detectMultiScale(gray,1.3,5)
-                    #Scaling factor 1.3
-                    # Minimum naber 5
-                    for (x,y,w,h) in faces:
-                        face_croped=img[y:y+h,x:x+w]
-                        return face_croped
-                cap=cv2.VideoCapture(0)
-                img_id=0
-                while True:
-                    ret,my_frame=cap.read()
-                    if face_croped(my_frame) is not None:
-                        img_id+=1
-                        face=cv2.resize(face_croped(my_frame),(200,200))
-                        face=cv2.cvtColor(face,cv2.COLOR_BGR2GRAY)
-                        file_path="data_img/stdudent."+str(id)+"."+str(img_id)+".jpg"
-                        cv2.imwrite(file_path,face)
-                        cv2.putText(face,str(img_id),(50,50),cv2.FONT_HERSHEY_COMPLEX,2,(0,255,0),2)        
-                        cv2.imshow("Capture Images",face)
-
-                    if cv2.waitKey(1)==13 or int(img_id)==100:
-                        break
-                cap.release()
-                cv2.destroyAllWindows()
-                messagebox.showinfo("Result","Generating dataset completed!",parent=self.root)
-            except Exception as es:
-                messagebox.showerror("Error",f"Due to: {str(es)}",parent=self.root) 
+        image_id = 0
+        try:
+            while True:
+                ok, frame = camera.read()
+                if not ok:
+                    raise RuntimeError("Camera frame could not be read.")
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                faces = detector.detectMultiScale(gray, 1.3, 5)
+                if len(faces):
+                    x, y, width, height = faces[0]
+                    image_id += 1
+                    face = cv2.resize(gray[y:y + height, x:x + width], (200, 200))
+                    cv2.imwrite(os.path.join(
+                        self.data_dir, f"stdudent.{student_id}.{image_id}.jpg"), face)
+                    cv2.putText(face, str(image_id), (50, 50),
+                                cv2.FONT_HERSHEY_COMPLEX, 2, 255, 2)
+                    cv2.imshow("Capture Images", face)
+                if cv2.waitKey(1) == 13 or image_id >= 100:
+                    break
+        finally:
+            camera.release()
+            cv2.destroyAllWindows()
+        if image_id == 0:
+            raise RuntimeError("No face was detected. No samples were captured.")
 
 
 # main class object
