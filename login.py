@@ -17,6 +17,10 @@ from helpsupport import Helpsupport
 from db_config import DB_CONFIG
 from main import Face_Recognition_System
 import os
+from ui.theme import COLORS, apply_theme, FONTS
+from ui.components import *
+from ui.icons import ICONS
+from ui.assets import get_image_path, load_image, BASE_DIR
 import json
 from Session_utils import save_session, load_session, clear_session
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -44,16 +48,16 @@ class Login:
         self.var_remember = BooleanVar(value=False)
 
         # -------------------- Theme --------------------
-        WHITE = "#FFFFFF"
-        BG = "#F7F9FC"
-        BLUE = "#2563EB"
-        BLUE_DARK = "#172554"
+        WHITE = COLORS["white"]
+        BG = COLORS["bg_main"]
+        BLUE = COLORS["primary"]
+        BLUE_DARK = COLORS["secondary"]
         BLUE_SOFT = "#EFF6FF"
-        PINK = "#EC4899"
+        PINK = COLORS["accent_pink"]
         PINK_SOFT = "#FDF2F8"
-        TEXT = "#1E293B"
-        MUTED = "#64748B"
-        BORDER = "#E2E8F0"
+        TEXT = COLORS["text_main"]
+        MUTED = COLORS["text_muted"]
+        BORDER = COLORS["border"]
 
         style = ttk.Style(self.root)
         try:
@@ -562,15 +566,15 @@ class Login:
             self.root2.grid_columnconfigure(0, weight=11)
             self.root2.grid_columnconfigure(1, weight=9)
 
-            WHITE = "#FFFFFF"
-            BG = "#F7F9FC"
-            BLUE = "#2563EB"
-            BLUE_DARK = "#172554"
+            WHITE = COLORS["white"]
+            BG = COLORS["bg_main"]
+            BLUE = COLORS["primary"]
+            BLUE_DARK = COLORS["secondary"]
             BLUE_SOFT = "#EFF6FF"
-            PINK = "#EC4899"
-            TEXT = "#1E293B"
-            MUTED = "#64748B"
-            BORDER = "#E2E8F0"
+            PINK = COLORS["accent_pink"]
+            TEXT = COLORS["text_main"]
+            MUTED = COLORS["text_muted"]
+            BORDER = COLORS["border"]
 
             visual = Frame(self.root2, bg=BLUE_DARK)
             visual.grid(row=0, column=0, sticky="nsew", padx=(24, 12), pady=24)

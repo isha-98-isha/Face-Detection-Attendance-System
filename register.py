@@ -1,5 +1,9 @@
 import os
-from tkinter import* 
+from ui.theme import COLORS, apply_theme, FONTS
+from ui.components import *
+from ui.icons import ICONS
+from ui.assets import get_image_path, load_image, BASE_DIR
+from tkinter import*
 from tkinter import ttk
 from PIL import Image,ImageTk
 from tkinter import messagebox
@@ -36,16 +40,16 @@ class Register:
         self.var_showpwd = IntVar()
 
         # -------------------- Theme --------------------
-        WHITE = "#FFFFFF"
-        BG = "#F7F9FC"
-        BLUE = "#2563EB"
-        BLUE_DARK = "#172554"
+        WHITE = COLORS["white"]
+        BG = COLORS["bg_main"]
+        BLUE = COLORS["primary"]
+        BLUE_DARK = COLORS["secondary"]
         BLUE_SOFT = "#EFF6FF"
-        PINK = "#EC4899"
+        PINK = COLORS["accent_pink"]
         PINK_SOFT = "#FDF2F8"
-        TEXT = "#1E293B"
-        MUTED = "#64748B"
-        BORDER = "#E2E8F0"
+        TEXT = COLORS["text_main"]
+        MUTED = COLORS["text_muted"]
+        BORDER = COLORS["border"]
 
         style = ttk.Style(self.root)
         try:
@@ -368,12 +372,12 @@ class Register:
         """Clear placeholder text when entry gets focus"""
         if self.var_email.get() == "example@gmail.com":
             self.var_email.set("")
-    
+
     def on_email_focus_out(self, event):
         """Restore placeholder text if field is empty"""
         if self.var_email.get() == "":
             self.var_email.set("example@gmail.com")
-    
+
     def toggle_password(self):
         """Toggle between showing and hiding passwords"""
         if self.var_showpwd.get():
@@ -388,37 +392,37 @@ class Register:
         # Check if email ends with @gmail.com
         if not email.endswith("@gmail.com"):
             return False
-        
+
         # Check for basic email format using regex
         pattern = r'^[a-zA-Z0-9_.+-]+@gmail\.com$'
         if not re.match(pattern, email):
             return False
-            
+
         return True
-    
+
     def validate_password(self, password):
         """Validate password strength"""
         # Check length
         if len(password) < 8:
             return False, "Password must be at least 8 characters long"
-        
+
         # Check for at least one digit
         if not any(char.isdigit() for char in password):
             return False, "Password must contain at least one number"
-        
+
         # Check for at least one special character
         if not any(char in "!@#$%^&*()-_=+[]{}|;:'\",.<>/?`~" for char in password):
             return False, "Password must contain at least one special character"
-            
+
         return True, "Password is valid"
 
     def open_login(self):
         # Close the current Register window
         self.root.destroy()
-        
+
         # Import Login class from login.py
         from login import Login
-        
+
         # Create new Login window
         root=Tk()
         app=Login(root)
@@ -434,60 +438,100 @@ class Register:
         sa = self.var_sa.get().strip()
         pwd = self.var_pwd.get()
         cpwd = self.var_cpwd.get()
-        
-        # Basic validation for empty fields
-        if (fname == "" or lname == "" or cnum == "" or 
-            email == "" or ssq == "Select" or sa == "" or 
-            pwd == "" or cpwd == ""):
-            messagebox.showerror("Error", "All Fields Required!")
+
+        # 1. First Name
+        if fname == "":
+            messagebox.showerror("Error", "First Name is required.\nPlease enter your first name.", parent=self.root)
             return
-            
-        # Check if email is still the placeholder
-        if email == "example@gmail.com":
-            messagebox.showerror("Error", "Please enter your email address")
+
+        # 2. Last Name
+        if lname == "":
+            messagebox.showerror("Error", "Last Name is required.\nPlease enter your last name.", parent=self.root)
             return
-            
-        # Validate email format
-        if not self.validate_email(email):
-            messagebox.showerror("Error", "Please enter a valid Gmail address (example@gmail.com)")
+
+        # 3. Contact Number
+        if cnum == "":
+            messagebox.showerror("Error", "Contact Number is required.\nPlease enter a valid contact number.", parent=self.root)
             return
-            
-        # Validate password
-        pwd_valid, pwd_msg = self.validate_password(pwd)
-        if not pwd_valid:
-            messagebox.showerror("Error", pwd_msg)
-            return
-            
-        # Check if passwords match
-        if pwd != cpwd:
-            messagebox.showerror("Error", "Password and Confirm Password do not match!")
-            return
-            
-        # Check terms and conditions
-        if self.var_check.get() == 0:
-            messagebox.showerror("Error", "Please check the 'I Agree Terms and Conditions'!")
-            return
-            
-        # Contact number validation (optional)
         if not cnum.isdigit() or len(cnum) < 10:
-            messagebox.showerror("Error", "Please enter a valid contact number")
+            messagebox.showerror("Error", "Invalid Contact Number.\nPlease enter digits only and use a valid phone number.", parent=self.root)
             return
-            
+
+        # 4. Email
+        if email == "" or email == "example@gmail.com":
+            messagebox.showerror("Error", "Email Address is required.\nPlease enter your Gmail address.", parent=self.root)
+            self.txtemail.focus_set()
+            return
+
+        if not self.validate_email(email):
+            messagebox.showerror("Error", "Invalid Email Address.\nPlease enter a valid Gmail address in this format:\nexample@gmail.com", parent=self.root)
+            self.txtemail.focus_set()
+            return
+
+        # 5. Security Question
+        if ssq == "Select":
+            messagebox.showerror("Error", "Security Question is required.\nPlease select a security question.", parent=self.root)
+            self.combo_security.focus_set()
+            return
+
+        # 6. Security Answer
+        if sa == "":
+            messagebox.showerror("Error", "Security Answer is required.\nPlease enter an answer.", parent=self.root)
+            return
+
+        # 7. Password
+        if pwd == "":
+            messagebox.showerror("Error", "Password is required.\nPlease enter a password.", parent=self.root)
+            self.txtpwd.focus_set()
+            return
+
+        if len(pwd) < 8:
+            messagebox.showerror("Error", "Password is too short.\nIt must contain at least 8 characters.", parent=self.root)
+            self.txtpwd.focus_set()
+            return
+
+        if not any(char.isdigit() for char in pwd):
+            messagebox.showerror("Error", "Password is invalid.\nIt must contain at least one number.", parent=self.root)
+            self.txtpwd.focus_set()
+            return
+
+        if not any(char in "!@#$%^&*()-_=+[]{}|;:'\",.<>/?`~" for char in pwd):
+            messagebox.showerror("Error", "Password is invalid.\nIt must contain at least one special character.", parent=self.root)
+            self.txtpwd.focus_set()
+            return
+
+        # 8. Confirm Password
+        if cpwd == "":
+            messagebox.showerror("Error", "Confirm Password is required.\nPlease re-enter your password.", parent=self.root)
+            self.txtcpwd.focus_set()
+            return
+
+        if pwd != cpwd:
+            messagebox.showerror("Error", "Passwords do not match.\nConfirm Password must exactly match Password.", parent=self.root)
+            self.txtcpwd.focus_set()
+            return
+
+        # 9. Terms & Conditions
+        if self.var_check.get() == 0:
+            messagebox.showerror("Error", "Terms & Conditions are required.\nPlease check the agreement before registering.", parent=self.root)
+            return
+
         # Database operations
         try:
             conn = mysql.connector.connect(**DB_CONFIG)
             mycursor = conn.cursor()
-            
-            # Check if user already exists
+
+            # 10. Database duplicate-email check
             query=("select * from regteach where BINARY email = BINARY %s")
             value=(email,)
             mycursor.execute(query,value)
             row=mycursor.fetchone()
-            
+
             if row!=None:
-                messagebox.showerror("Error","User already exists, please try another email")
+                messagebox.showerror("Error","This email is already registered.\nPlease use a different email address or return to Login.", parent=self.root)
+                self.txtemail.focus_set()
             else:
-                # Insert new user
+                # 11. Database insertion
                 mycursor.execute("insert into regteach values(%s,%s,%s,%s,%s,%s,%s)",(
                 fname,
                 lname,
@@ -500,21 +544,13 @@ class Register:
 
                 conn.commit()
                 conn.close()
-                messagebox.showinfo("Success","Registration Successful!")
-                
-                # Optional: Clear fields after successful registration
-                self.var_fname.set("")
-                self.var_lname.set("")
-                self.var_cnum.set("")
-                self.var_email.set("example@gmail.com")
-                self.var_ssq.set("Select")
-                self.var_sa.set("")
-                self.var_pwd.set("")
-                self.var_cpwd.set("")
-                self.var_check.set(0)
-                
+                messagebox.showinfo("Success","Registration Successful!\nYour account has been created. You can now log in.", parent=self.root)
+
+                # Navigate to login
+                self.open_login()
+
         except Exception as es:
-            messagebox.showerror("Error",f"Due to: {str(es)}")
+            messagebox.showerror("Error",f"Registration could not be completed.\nPlease check the database connection and try again.\n\nDetails: {str(es)}", parent=self.root)
 
 if __name__ == "__main__":
     root=Tk()

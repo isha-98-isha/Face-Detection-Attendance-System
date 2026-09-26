@@ -1,0 +1,6 @@
+Pillow
+mysql-connector-python
+PyMySQL
+opencv-contrib-python
+numpy
+python-dotenv

@@ -1,4 +1,8 @@
 import os
+from ui.theme import COLORS, apply_theme, FONTS
+from ui.components import *
+from ui.icons import ICONS
+from ui.assets import get_image_path, load_image, BASE_DIR
 from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
@@ -24,16 +28,16 @@ class Developer:
         except Exception:
             pass
 
-        BG = "#F7F9FC"
-        WHITE = "#FFFFFF"
-        BLUE = "#2563EB"
-        DARK_BLUE = "#172554"
-        PINK = "#EC4899"
-        TEXT = "#1E293B"
-        MUTED = "#64748B"
-        BORDER = "#E2E8F0"
-        SOFT_BLUE = "#EFF6FF"
-        SOFT_PINK = "#FDF2F8"
+        BG = COLORS["bg_main"]
+        WHITE = COLORS["white"]
+        BLUE = COLORS["primary"]
+        DARK_BLUE = COLORS["secondary"]
+        PINK = COLORS["accent_pink"]
+        TEXT = COLORS["text_main"]
+        MUTED = COLORS["text_muted"]
+        BORDER = COLORS["border"]
+        SOFT_BLUE = COLORS["primary_light"]
+        SOFT_PINK = COLORS["accent_pink_soft"]
 
         self.root.configure(bg=BG)
         self.root.protocol("WM_DELETE_WINDOW", self.root.destroy)

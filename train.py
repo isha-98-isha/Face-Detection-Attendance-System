@@ -3,6 +3,10 @@ from tkinter import*
 from tkinter import ttk
 from PIL import Image,ImageTk
 import os
+from ui.theme import COLORS, apply_theme, FONTS
+from ui.components import *
+from ui.icons import ICONS
+from ui.assets import get_image_path, load_image, BASE_DIR
 import mysql.connector
 import cv2
 import numpy as np
@@ -32,18 +36,18 @@ class Train:
         self.root.configure(bg="#F5F8FD")
 
         BG = "#F5F8FD"
-        WHITE = "#FFFFFF"
-        BLUE = "#2563EB"
+        WHITE = COLORS["white"]
+        BLUE = COLORS["primary"]
         BLUE_DARK = "#162A63"
-        BLUE_SOFT = "#EAF1FF"
-        PINK = "#EC4899"
-        PINK_SOFT = "#FDF0F8"
+        BLUE_SOFT = COLORS["primary_light"]
+        PINK = COLORS["accent_pink"]
+        PINK_SOFT = COLORS["accent_pink_soft"]
         TEAL = "#14B8A6"
         TEAL_SOFT = "#EAFBF8"
         TEXT = "#17305F"
         MUTED = "#6C7FA2"
         BORDER = "#DCE6F3"
-        ORANGE = "#F59E0B"
+        ORANGE = COLORS["accent_orange"]
         ORANGE_SOFT = "#FFF6E8"
 
         style = ttk.Style(self.root)
