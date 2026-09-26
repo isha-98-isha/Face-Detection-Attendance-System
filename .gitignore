@@ -22,3 +22,5 @@ attendance_error_log.txt
 face_recognition.log
 face_recognition_log.txt
 tempCodeRunnerFile.py
+# Local login/session state
+session.json

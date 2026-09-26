@@ -8,6 +8,10 @@ from developer import Developer
 from helpsupport import Helpsupport
 from db_config import ensure_owner_columns
 import os
+from ui.theme import COLORS, apply_theme, FONTS
+from ui.components import *
+from ui.icons import ICONS
+from ui.assets import get_image_path, load_image, BASE_DIR
 import mysql.connector
 import pymysql
 
@@ -43,28 +47,28 @@ class Face_Recognition_System:
         # ====================================================
         # Design system
         # ====================================================
-        NAVY = "#0B1836"
-        NAVY_SOFT = "#13214A"
-        NAVY_ACTIVE = "#1D3A8A"
-        BG = "#F1F5FB"
-        WHITE = "#FFFFFF"
-        BLUE = "#2563EB"
-        BLUE_DARK = "#172554"
-        BLUE_SOFT = "#EAF1FF"
-        PINK = "#EC4899"
-        PINK_SOFT = "#FDF0F8"
-        PURPLE = "#7C3AED"
-        PURPLE_SOFT = "#F1EBFE"
-        ORANGE = "#F59E0B"
-        ORANGE_SOFT = "#FEF3E0"
-        TEAL = "#0D9488"
-        TEAL_SOFT = "#E4F6F4"
-        GREEN = "#10B981"
-        TEXT = "#1E293B"
-        MUTED = "#64748B"
-        BORDER = "#E2E8F0"
-        RED = "#DC2626"
-        RED_SOFT = "#FEF2F2"
+        NAVY = COLORS["secondary"]
+        NAVY_SOFT = COLORS["secondary"]
+        NAVY_ACTIVE = COLORS["primary_dark"]
+        BG = COLORS["bg_main"]
+        WHITE = COLORS["white"]
+        BLUE = COLORS["primary"]
+        BLUE_DARK = COLORS["secondary"]
+        BLUE_SOFT = COLORS["primary_light"]
+        PINK = COLORS["accent_pink"]
+        PINK_SOFT = COLORS["accent_pink_soft"]
+        PURPLE = COLORS["accent_purple"]
+        PURPLE_SOFT = COLORS["accent_pink_soft"]
+        ORANGE = COLORS["accent_orange"]
+        ORANGE_SOFT = COLORS["accent_pink_soft"]
+        TEAL = COLORS["accent_teal"]
+        TEAL_SOFT = COLORS["accent_teal"]
+        GREEN = COLORS["success"]
+        TEXT = COLORS["text_main"]
+        MUTED = COLORS["text_muted"]
+        BORDER = COLORS["border"]
+        RED = COLORS["danger"]
+        RED_SOFT = COLORS["accent_pink_soft"]
 
         self.C_BG = BG
         self.C_WHITE = WHITE
