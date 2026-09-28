@@ -56,7 +56,9 @@ class Developer:
             "Developer.Secondary.TButton", background=WHITE, foreground=TEXT,
             relief="flat", borderwidth=1, bordercolor=BORDER, padding=(16, 9),
             font=("Segoe UI", 10, "bold"))
-        style.map("Developer.Secondary.TButton", background=[("active", "#F8FAFC")])
+        style.map("Developer.Secondary.TButton",
+            background=[("active", "#F8FAFC"), ("pressed", "#F1F5F9")],
+            bordercolor=[("focus", BLUE)])
 
         self.root.grid_rowconfigure(1, weight=1)
         self.root.grid_columnconfigure(0, weight=1)
@@ -66,11 +68,18 @@ class Developer:
         header.grid_propagate(False)
         header.grid_columnconfigure(1, weight=1)
 
-        mark = Frame(header, bg=BLUE, width=48, height=48)
-        mark.grid(row=0, column=0, padx=(24, 14), pady=17)
-        mark.grid_propagate(False)
-        Label(mark, text="FR", bg=BLUE, fg=WHITE,
-              font=("Segoe UI", 14, "bold")).pack(expand=True)
+        try:
+            _logo = Image.open(os.path.join(IMAGE_DIR, "Face-Recognition-Software.png"))
+            _logo = _logo.resize((44, 44), Image.LANCZOS)
+            self._hdr_logo = ImageTk.PhotoImage(_logo)
+            mark = Label(header, image=self._hdr_logo, bg=WHITE)
+            mark.grid(row=0, column=0, padx=(24, 14), pady=17)
+        except Exception:
+            mark = Frame(header, bg=BLUE, width=48, height=48)
+            mark.grid(row=0, column=0, padx=(24, 14), pady=17)
+            mark.grid_propagate(False)
+            Label(mark, text="FR", bg=BLUE, fg=WHITE,
+                  font=("Segoe UI", 14, "bold")).pack(expand=True)
 
         brand = Frame(header, bg=WHITE)
         brand.grid(row=0, column=1, sticky="nsw", pady=13)

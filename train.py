@@ -70,6 +70,22 @@ class Train:
             background=[("active", "#1D4ED8"), ("pressed", "#1E40AF")],
         )
 
+        style.configure(
+            "Train.SecondaryBack.TButton",
+            background=WHITE,
+            foreground=TEXT,
+            relief="flat",
+            borderwidth=1,
+            bordercolor=BORDER,
+            padding=(16, 9),
+            font=("Segoe UI", 10, "bold"),
+        )
+        style.map(
+            "Train.SecondaryBack.TButton",
+            background=[("active", "#F8FAFC"), ("pressed", "#F1F5F9")],
+            bordercolor=[("focus", BLUE)],
+        )
+
         # Root layout
         self.root.grid_rowconfigure(0, weight=0)
         self.root.grid_rowconfigure(1, weight=1)
@@ -87,11 +103,18 @@ class Train:
         brand = Frame(header, bg=WHITE)
         brand.grid(row=0, column=0, sticky="nsw", padx=(24, 16))
 
-        logo = Frame(brand, bg=BLUE, width=50, height=50)
-        logo.pack(side=LEFT, pady=16)
-        logo.pack_propagate(False)
-        Label(logo, text="FR", bg=BLUE, fg=WHITE,
-              font=("Segoe UI", 15, "bold")).pack(expand=True)
+        try:
+            _logo = Image.open(os.path.join(IMAGE_DIR, "Face-Recognition-Software.png"))
+            _logo = _logo.resize((44, 44), Image.LANCZOS)
+            self._hdr_logo = ImageTk.PhotoImage(_logo)
+            logo = Label(brand, image=self._hdr_logo, bg=WHITE)
+            logo.pack(side=LEFT, pady=16)
+        except Exception:
+            logo = Frame(brand, bg=BLUE, width=50, height=50)
+            logo.pack(side=LEFT, pady=16)
+            logo.pack_propagate(False)
+            Label(logo, text="FR", bg=BLUE, fg=WHITE,
+                  font=("Segoe UI", 15, "bold")).pack(expand=True)
 
         brand_copy = Frame(brand, bg=WHITE)
         brand_copy.pack(side=LEFT, padx=(12, 0), pady=14)
@@ -105,7 +128,7 @@ class Train:
         ).pack(anchor="w", pady=(2, 0))
 
         ttk.Button(header, text="Back to Dashboard", command=self.go_back,
-                   style="Train.TButton").grid(
+                   style="Train.SecondaryBack.TButton").grid(
                        row=0, column=1, sticky="e", padx=(10, 18), pady=19)
 
         Label(

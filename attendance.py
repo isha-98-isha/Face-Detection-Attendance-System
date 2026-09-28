@@ -229,17 +229,23 @@ class Attendance:
         header.grid_propagate(False)
         header.grid_columnconfigure(1, weight=1)
 
-        brand_mark = Frame(header, bg=BLUE, width=48, height=48)
-        brand_mark.grid(row=0, column=0, padx=(24, 14), pady=17)
-        brand_mark.grid_propagate(False)
-
-        Label(
-            brand_mark,
-            text="FR",
-            bg=BLUE,
-            fg=WHITE,
-            font=("Segoe UI", 14, "bold"),
-        ).place(relx=0.5, rely=0.5, anchor="center")
+        try:
+            _logo = Image.open(os.path.join(IMAGE_DIR, "Face-Recognition-Software.png"))
+            _logo = _logo.resize((44, 44), Image.LANCZOS)
+            self._hdr_logo = ImageTk.PhotoImage(_logo)
+            brand_mark = Label(header, image=self._hdr_logo, bg=WHITE)
+            brand_mark.grid(row=0, column=0, padx=(24, 14), pady=17)
+        except Exception:
+            brand_mark = Frame(header, bg=BLUE, width=48, height=48)
+            brand_mark.grid(row=0, column=0, padx=(24, 14), pady=17)
+            brand_mark.grid_propagate(False)
+            Label(
+                brand_mark,
+                text="FR",
+                bg=BLUE,
+                fg=WHITE,
+                font=("Segoe UI", 14, "bold"),
+            ).place(relx=0.5, rely=0.5, anchor="center")
 
         brand_area = Frame(header, bg=WHITE)
         brand_area.grid(row=0, column=1, sticky="nsw", pady=13)
@@ -322,7 +328,7 @@ class Attendance:
         self.search_type_combo = ttk.Combobox(
             search_panel,
             textvariable=self.var_search_type,
-            values=("Select field", "Date", "Student Name", "Roll No", "Student ID"),
+            values=("Select field", "Date", "Time", "Student ID", "Student Name", "Roll No", "Status"),
             state="readonly",
             width=16,
             style="Modern.TCombobox",
@@ -545,18 +551,18 @@ class Attendance:
             "Attend": "Status",
         }
         widths = {
-            "ID": 105,
-            "Roll_No": 105,
-            "Name": 160,
+            "ID": 110,
+            "Roll_No": 100,
+            "Name": 180,
             "Time": 110,
-            "Date": 110,
-            "Attend": 110,
+            "Date": 120,
+            "Attend": 120,
         }
 
         for col in cols:
             self.attendanceReport_left.heading(col, text=headings[col], anchor="center")
             self.attendanceReport_left.column(
-                col, width=widths[col], minwidth=90, stretch=False, anchor="center",
+                col, width=widths[col], minwidth=90, stretch=True, anchor="center",
             )
 
         self.attendanceReport_left.bind("<ButtonRelease>", self.get_cursor_left)
@@ -573,7 +579,7 @@ class Attendance:
 
         Label(
             db_title,
-            text="DATABASE RECORDS",
+            text="Attendance Record",
             bg=WHITE,
             fg=TEXT,
             font=("Segoe UI", 11, "bold"),
@@ -622,7 +628,7 @@ class Attendance:
         for col in cols:
             self.attendanceReport.heading(col, text=headings[col], anchor="center")
             self.attendanceReport.column(
-                col, width=widths[col], minwidth=90, stretch=False, anchor="center",
+                col, width=widths[col], minwidth=90, stretch=True, anchor="center",
             )
 
         self.attendanceReport.bind("<ButtonRelease>", self.get_cursor_right)
@@ -696,7 +702,7 @@ class Attendance:
 
     def choose_search_date(self):
         self.var_search_type.set("Date")
-        self.choose_date(target=self.var_search_value)
+        self.choose_date(target=self.var_search_value, btn_widget=getattr(self, 'search_calendar_button', None))
 
     def update_search_controls(self, event=None):
         if self.var_search_type.get() == "Date":
@@ -710,74 +716,47 @@ class Attendance:
         self.search_calendar_button.grid_remove()
         self.fetch_data()
 
-    def choose_time(self):
+    def choose_time(self, btn_widget=None):
+        from tktimepicker import SpinTimePickerModern, constants
         picker = Toplevel(self.root)
         picker.title("Select time")
         picker.transient(self.root)
         picker.grab_set()
-        now = datetime.now()
-        hour = StringVar(value=now.strftime("%H"))
-        minute = StringVar(value=now.strftime("%M"))
-        Label(picker, text="Hour").grid(row=0, column=0, padx=8, pady=(12, 4))
-        Label(picker, text="Minute").grid(row=0, column=1, padx=8, pady=(12, 4))
-        Spinbox(picker, from_=0, to=23, width=4, textvariable=hour).grid(row=1, column=0, padx=8)
-        Spinbox(picker, from_=0, to=59, width=4, textvariable=minute).grid(row=1, column=1, padx=8)
-
+        
+        time_picker = SpinTimePickerModern(picker)
+        time_picker.addAll(constants.HOURS24)
+        time_picker.pack(expand=True, fill="both", padx=10, pady=10)
+        
         def apply_time():
-            self.var_time.set(f"{int(hour.get()):02d}:{int(minute.get()):02d}")
+            time_val = time_picker.time()
+            hours, minutes = time_val[0], time_val[1]
+            self.var_time.set(f"{int(hours):02d}:{int(minutes):02d}")
             picker.destroy()
+            
+        btn_frame = Frame(picker, bg=COLORS["border"])
+        btn_frame.pack(fill="x", pady=2)
+        ttk.Button(btn_frame, text="Use time", command=apply_time, style="Primary.TButton").pack(side="left", expand=True, padx=2)
+        ttk.Button(btn_frame, text="Cancel", command=picker.destroy, style="Secondary.TButton").pack(side="right", expand=True, padx=2)
 
-        ttk.Button(picker, text="Use time", command=apply_time,
-                   style="Primary.TButton").grid(row=2, column=0, columnspan=2, padx=8, pady=12)
-
-    def choose_date(self, target=None):
+    def choose_date(self, target=None, btn_widget=None):
         target = target or self.var_date
+        from tkcalendar import Calendar
         picker = Toplevel(self.root)
         picker.title("Select date")
         picker.transient(self.root)
         picker.grab_set()
-        now = datetime.now()
-        month = IntVar(value=now.month)
-        year = IntVar(value=now.year)
-
-        def render():
-            for child in calendar_body.winfo_children():
-                child.destroy()
-            Label(calendar_body, text=f"{calendar.month_name[month.get()]} {year.get()}",
-                  font=("Segoe UI", 11, "bold")).grid(row=0, column=0, columnspan=7, pady=8)
-            for column, name in enumerate(("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su")):
-                Label(calendar_body, text=name, width=4, fg="#64748B").grid(row=1, column=column)
-            for index, day in enumerate(calendar.monthcalendar(year.get(), month.get())):
-                for column, value in enumerate(day):
-                    if value:
-                        Button(calendar_body, text=str(value), width=3, relief="flat",
-                               command=lambda value=value: select_day(value)).grid(
-                                   row=2 + index, column=column, padx=1, pady=1)
-
-        def select_day(day):
-            target.set(f"{day:02d}-{month.get():02d}-{year.get()}")
+        
+        cal = Calendar(picker, selectmode='day', date_pattern='dd-mm-yyyy')
+        cal.pack(padx=2, pady=2, fill="both", expand=True)
+        
+        def select_day():
+            target.set(cal.get_date())
             picker.destroy()
-
-        controls = Frame(picker)
-        controls.pack(fill=X, padx=8, pady=(8, 0))
-        Button(controls, text="<", command=lambda: change_month(-1)).pack(side=LEFT)
-        Button(controls, text=">", command=lambda: change_month(1)).pack(side=RIGHT)
-        calendar_body = Frame(picker)
-        calendar_body.pack(padx=8, pady=8)
-
-        def change_month(offset):
-            value = month.get() + offset
-            if value < 1:
-                month.set(12)
-                year.set(year.get() - 1)
-            elif value > 12:
-                month.set(1)
-                year.set(year.get() + 1)
-            else:
-                month.set(value)
-            render()
-
-        render()
+            
+        btn_frame = Frame(picker, bg=COLORS["border"])
+        btn_frame.pack(fill="x", pady=2)
+        ttk.Button(btn_frame, text="Select", command=select_day, style="Primary.TButton").pack(side="left", expand=True, padx=2)
+        ttk.Button(btn_frame, text="Cancel", command=picker.destroy, style="Secondary.TButton").pack(side="right", expand=True, padx=2)
 
     # ===============================update function for mysql database=================
     def update_data(self):
@@ -885,9 +864,11 @@ class Attendance:
         try:
             search_columns = {
                 "Date": "std_date",
+                "Time": "std_time",
                 "Student Name": "std_name",
                 "Roll No": "std_roll_no",
                 "Student ID": "std_id",
+                "Status": "std_attendance",
             }
             column = search_columns[search_type]
             if search_type == "Date":
@@ -1028,7 +1009,7 @@ class Attendance:
                 conn.commit()
                 self.fetch_data()
                 conn.close()
-                messagebox.showinfo("Success","All Records are Saved in Database!",parent=self.root)
+                messagebox.showinfo("Success","Attendance Marked!",parent=self.root)
                 return
             except Exception as es:
                 messagebox.showerror("Error",f"Due to: {str(es)}",parent=self.root)

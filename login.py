@@ -161,6 +161,14 @@ class Login:
         visual_content = Frame(visual, bg=BLUE_DARK)
         visual_content.place(relx=0.11, rely=0.16, relwidth=0.78, relheight=0.68)
 
+        try:
+            _logo = Image.open(os.path.join(IMAGE_DIR, "Face-Recognition-Software.png"))
+            _logo = _logo.resize((60, 60), Image.LANCZOS)
+            self._login_logo = ImageTk.PhotoImage(_logo)
+            Label(visual_content, image=self._login_logo, bg=BLUE_DARK).pack(anchor="w", pady=(0, 10))
+        except Exception:
+            pass
+
         Label(
             visual_content,
             text="FACE RECOGNITION",
@@ -432,7 +440,7 @@ class Login:
             if row==None:
                 messagebox.showerror("Error","Invalid Username and Password!")
             else:
-                open_min=messagebox.askyesno("YesNo","Access only Admin")
+                open_min=messagebox.askyesno("YesNo","Do you want to login ?")
                 if open_min>0:
                     if self.var_remember.get():
                         save_session(self.txtuser.get())
