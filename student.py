@@ -205,23 +205,29 @@ class Student:
         header.grid_columnconfigure(1, weight=1)
         header.grid_columnconfigure(2, weight=0)
 
-        brand_mark = Frame(
-            header,
-            bg=BLUE,
-            width=48,
-            height=48,
-            highlightthickness=0,
-        )
-        brand_mark.grid(row=0, column=0, padx=(24, 14), pady=17)
-        brand_mark.grid_propagate(False)
-
-        Label(
-            brand_mark,
-            text="FR",
-            bg=BLUE,
-            fg=WHITE,
-            font=("Segoe UI", 14, "bold"),
-        ).place(relx=0.5, rely=0.5, anchor="center")
+        try:
+            _logo = Image.open(os.path.join(IMAGE_DIR, "Face-Recognition-Software.png"))
+            _logo = _logo.resize((44, 44), Image.LANCZOS)
+            self._hdr_logo = ImageTk.PhotoImage(_logo)
+            brand_mark = Label(header, image=self._hdr_logo, bg=WHITE)
+            brand_mark.grid(row=0, column=0, padx=(24, 14), pady=17)
+        except Exception:
+            brand_mark = Frame(
+                header,
+                bg=BLUE,
+                width=48,
+                height=48,
+                highlightthickness=0,
+            )
+            brand_mark.grid(row=0, column=0, padx=(24, 14), pady=17)
+            brand_mark.grid_propagate(False)
+            Label(
+                brand_mark,
+                text="FR",
+                bg=BLUE,
+                fg=WHITE,
+                font=("Segoe UI", 14, "bold"),
+            ).place(relx=0.5, rely=0.5, anchor="center")
 
         brand_area = Frame(header, bg=WHITE)
         brand_area.grid(row=0, column=1, sticky="ew", pady=13)
@@ -374,8 +380,8 @@ class Student:
         fields = [
             ("Student ID", self.var_std_id, 0, 0),
             ("Student Name", self.var_std_name, 0, 2),
-            ("Class Division", self.var_div, 1, 0),
-            ("Roll No", self.var_roll, 1, 2),
+            ("Roll No", self.var_roll, 1, 0),
+            ("Class Division", self.var_div, 1, 2),
             ("Gender", self.var_gender, 2, 0),
             ("Date of Birth", self.var_dob, 2, 2),
             ("Email", self.var_email, 3, 0),
@@ -413,8 +419,9 @@ class Student:
                 date_field.grid_columnconfigure(0, weight=1)
                 widget = ttk.Entry(date_field, textvariable=variable, style="Modern.TEntry")
                 widget.grid(row=0, column=0, sticky="ew")
-                ttk.Button(date_field, text="\U0001F4C5", command=self.choose_birth_date,
-                           style="Secondary.TButton", width=3).grid(row=0, column=1, padx=(5, 0))
+                self.dob_button = ttk.Button(date_field, text="\U0001F4C5", command=self.choose_birth_date,
+                           style="Secondary.TButton", width=3)
+                self.dob_button.grid(row=0, column=1, padx=(5, 0))
                 return widget
             elif label_text == "Tutor Name":
                 widget = ttk.Entry(
@@ -511,7 +518,7 @@ class Student:
         search_combo = ttk.Combobox(
             search_card,
             textvariable=self.var_searchTX,
-            values=("Select", "Date", "Roll-No", "Student ID", "Name"),
+            values=("Select", "Date", "Student ID", "Name", "Roll-No", "Mobile No", "Gender", "Course", "Department"),
             state="readonly",
             style="Modern.TCombobox",
             width=14,
@@ -605,6 +612,23 @@ class Student:
             yscrollcommand=scroll_y.set,
             style="Modern.Treeview",
         )
+        self.student_table["displaycolumns"] = (
+            "ID",
+            "Name",
+            "Roll-No",
+            "Dep",
+            "Course",
+            "Year",
+            "Sem",
+            "Div",
+            "Gender",
+            "DOB",
+            "Mob-No",
+            "Address",
+            "Email",
+            "Teacher",
+            "Photo",
+        )
 
         scroll_x.grid(row=1, column=0, sticky="ew")
         scroll_y.grid(row=0, column=1, sticky="ns")
@@ -653,7 +677,8 @@ class Student:
 
         for column in columns:
             self.student_table.heading(column, text=headings[column])
-            self.student_table.column(column, width=widths[column], minwidth=80, stretch=False)
+            anchor_val = "center" if column == "Name" else "w"
+            self.student_table.column(column, width=widths[column], minwidth=80, stretch=False, anchor=anchor_val)
 
         record_actions = Frame(right, bg=WHITE, highlightbackground=BORDER, highlightthickness=1)
         record_actions.grid(row=2, column=0, sticky="ew", pady=(12, 0))
@@ -669,14 +694,13 @@ class Student:
 
     def go_back(self):
         self.root.destroy()
-
     def choose_birth_date(self):
-        self._choose_date(self.var_dob, "Select date of birth")
+        self._choose_date(self.var_dob, "Select date of birth", getattr(self, 'dob_button', None))
 
     def choose_search_date(self):
         self.var_searchTX.set("Date")
         self.update_search_controls()
-        self._choose_date(self.var_search, "Select search date")
+        self._choose_date(self.var_search, "Select search date", getattr(self, 'search_date_button', None))
 
     def update_search_controls(self, event=None):
         if self.var_searchTX.get() == "Date":
@@ -684,57 +708,29 @@ class Student:
         else:
             self.search_date_button.grid_remove()
 
-    def _choose_date(self, target, title):
+    def _choose_date(self, target, title, btn_widget=None):
+        from tkcalendar import Calendar
         picker = Toplevel(self.root)
         picker.title(title)
         picker.transient(self.root)
         picker.grab_set()
-        now = datetime.now()
-        month = IntVar(value=now.month)
-        year = IntVar(value=now.year)
-        body = Frame(picker)
-        body.pack(padx=8, pady=8)
-
-        def render():
-            for child in body.winfo_children():
-                child.destroy()
-            Label(body, text=f"{calendar.month_name[month.get()]} {year.get()}",
-                  font=("Segoe UI", 11, "bold")).grid(row=0, column=0, columnspan=7, pady=8)
-            for column, name in enumerate(("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su")):
-                Label(body, text=name, width=4, fg="#64748B").grid(row=1, column=column)
-            for index, week in enumerate(calendar.monthcalendar(year.get(), month.get())):
-                for column, day in enumerate(week):
-                    if day:
-                        Button(body, text=str(day), width=3, relief="flat",
-                               command=lambda day=day: select_day(day)).grid(
-                                   row=2 + index, column=column, padx=1, pady=1)
-
-        def select_day(day):
-            target.set(f"{day:02d}-{month.get():02d}-{year.get()}")
+        
+        cal = Calendar(picker, selectmode='day', date_pattern='dd-mm-yyyy')
+        cal.pack(padx=2, pady=2, fill="both", expand=True)
+        
+        def select_day():
+            target.set(cal.get_date())
             picker.destroy()
-
-        def change_month(offset):
-            value = month.get() + offset
-            if value < 1:
-                month.set(12)
-                year.set(year.get() - 1)
-            elif value > 12:
-                month.set(1)
-                year.set(year.get() + 1)
-            else:
-                month.set(value)
-            render()
-
-        controls = Frame(picker)
-        controls.pack(fill=X, padx=8, pady=(8, 0))
-        Button(controls, text="<", command=lambda: change_month(-1)).pack(side=LEFT)
-        Button(controls, text=">", command=lambda: change_month(1)).pack(side=RIGHT)
-        render()
+            
+        btn_frame = Frame(picker, bg=COLORS["border"])
+        btn_frame.pack(fill="x", pady=2)
+        ttk.Button(btn_frame, text="Select", command=select_day, style="Primary.TButton").pack(side="left", expand=True, padx=2)
+        ttk.Button(btn_frame, text="Cancel", command=picker.destroy, style="Secondary.TButton").pack(side="right", expand=True, padx=2)
 
 
 # ==================Function Decleration==============================
     def add_data(self):
-        if self.var_dep.get()=="Select Department" or self.var_course.get=="Select Course" or self.var_year.get()=="Select Year" or self.var_semester.get()=="Select Semester" or self.var_std_id.get()=="" or self.var_std_name.get()=="" or self.var_div.get()=="" or self.var_roll.get()=="" or self.var_gender.get()=="" or self.var_dob.get()=="" or self.var_email.get()=="" or self.var_mob.get()=="" or self.var_address.get()=="" or self.var_teacher.get()=="":
+        if self.var_dep.get()=="Select Department" or self.var_course.get()=="Select Course" or self.var_year.get()=="Select Year" or self.var_semester.get()=="Select Semester" or self.var_std_id.get()=="" or self.var_std_name.get()=="" or self.var_div.get()=="" or self.var_div.get()=="select" or self.var_roll.get()=="" or self.var_gender.get()=="" or self.var_gender.get()=="select" or self.var_dob.get()=="" or self.var_email.get()=="" or self.var_mob.get()=="" or self.var_address.get()=="" or self.var_teacher.get()=="":
             messagebox.showerror("Error","Please Fill All Fields are Required!",parent=self.root)
         else:
             try:
@@ -764,7 +760,7 @@ class Student:
                 conn.commit()
                 self.fetch_data()
                 conn.close()
-                messagebox.showinfo("Success","All Records are Saved!",parent=self.root)
+                messagebox.showinfo("Success","Record Saved!",parent=self.root)
             except Exception as es:
                 messagebox.showerror("Error",f"Due to: {str(es)}",parent=self.root)
 
@@ -810,7 +806,7 @@ class Student:
         self.selected_student_id = data[0]
     # ========================================Update Function==========================
     def update_data(self):
-        if self.var_dep.get()=="Select Department" or self.var_course.get=="Select Course" or self.var_year.get()=="Select Year" or self.var_semester.get()=="Select Semester" or self.var_std_id.get()=="" or self.var_std_name.get()=="" or self.var_div.get()=="" or self.var_roll.get()=="" or self.var_gender.get()=="" or self.var_dob.get()=="" or self.var_email.get()=="" or self.var_mob.get()=="" or self.var_address.get()=="" or self.var_teacher.get()=="":
+        if self.var_dep.get()=="Select Department" or self.var_course.get()=="Select Course" or self.var_year.get()=="Select Year" or self.var_semester.get()=="Select Semester" or self.var_std_id.get()=="" or self.var_std_name.get()=="" or self.var_div.get()=="" or self.var_div.get()=="select" or self.var_roll.get()=="" or self.var_gender.get()=="" or self.var_gender.get()=="select" or self.var_dob.get()=="" or self.var_email.get()=="" or self.var_mob.get()=="" or self.var_address.get()=="" or self.var_teacher.get()=="":
             messagebox.showerror("Error","Please Fill All Fields are Required!",parent=self.root)
         else:
             try:
@@ -917,9 +913,13 @@ class Student:
                 my_cursor = conn.cursor()
                 search_columns = {
                     "Date": "DOB",
-                    "Roll-No": "Roll_No",
                     "Student ID": "Student_ID",
                     "Name": "Name",
+                    "Roll-No": "Roll_No",
+                    "Mobile No": "Mobile_No",
+                    "Gender": "Gender",
+                    "Course": "Course",
+                    "Department": "Department",
                 }
                 search_column = search_columns[self.var_searchTX.get()]
                 search_value = self.var_search.get().strip()

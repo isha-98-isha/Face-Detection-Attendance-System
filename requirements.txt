@@ -4,3 +4,5 @@ PyMySQL
 opencv-contrib-python
 numpy
 python-dotenv
+tkcalendar
+tkTimePicker
