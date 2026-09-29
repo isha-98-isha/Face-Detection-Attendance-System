@@ -17,6 +17,7 @@ from tkinter import messagebox
 from time import strftime
 from datetime import datetime
 from db_config import DB_CONFIG, owner_attendance_path, owner_model_path
+from camera_config import get_camera_source, get_settings, save_settings
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 IMAGE_DIR = os.path.join(BASE_DIR, "Images_GUI")
 class Face_Recognition:
@@ -251,13 +252,82 @@ class Face_Recognition:
             cursor="hand2",
         ).grid(row=0, column=1)
 
+        # ---- Camera Settings panel (below main panel) ----
+        cam_panel = Frame(body, bg=WHITE, highlightbackground=BORDER, highlightthickness=1)
+        cam_panel.grid(row=2, column=0, sticky="ew", pady=(14, 0))
+        cam_panel.grid_columnconfigure(1, weight=1)
+
+        Label(
+            cam_panel, text="CAMERA SOURCE",
+            bg=WHITE, fg=BLUE, font=("Segoe UI", 9, "bold")
+        ).grid(row=0, column=0, columnspan=4, sticky="w", padx=18, pady=(12, 6))
+
+        self._cam_type = tk.StringVar()
+        saved = get_settings()
+        self._cam_type.set(saved.get("source_type", "local"))
+
+        ttk.Radiobutton(
+            cam_panel, text="Local webcam (index)",
+            variable=self._cam_type, value="local",
+            command=self._on_cam_type_change
+        ).grid(row=1, column=0, padx=(18, 12), pady=(0, 10))
+
+        ttk.Radiobutton(
+            cam_panel, text="IP Webcam / Phone camera (URL)",
+            variable=self._cam_type, value="ip_webcam",
+            command=self._on_cam_type_change
+        ).grid(row=1, column=1, padx=(0, 12), pady=(0, 10), sticky="w")
+
+        self._ip_url_var = tk.StringVar(value=saved.get("ip_url", ""))
+        self._ip_entry = ttk.Entry(
+            cam_panel, textvariable=self._ip_url_var,
+            font=("Segoe UI", 10), width=38
+        )
+        self._ip_entry.grid(row=1, column=2, padx=(0, 8), pady=(0, 10), sticky="ew")
+
+        Label(
+            cam_panel,
+            text="e.g.  http://192.168.1.5:8080/video",
+            bg=WHITE, fg=MUTED, font=("Segoe UI", 8)
+        ).grid(row=2, column=2, sticky="w", padx=(0, 8), pady=(0, 8))
+
+        ttk.Button(
+            cam_panel, text="Save", style="Secondary.TButton",
+            command=self._save_cam_settings
+        ).grid(row=1, column=3, padx=(0, 18), pady=(0, 10))
+
+        Label(
+            cam_panel,
+            text="\u2139  Install \"IP Webcam\" from Play Store on Android. Start server → paste the URL above.",
+            bg=WHITE, fg=MUTED, font=("Segoe UI", 8)
+        ).grid(row=3, column=0, columnspan=4, sticky="w", padx=18, pady=(0, 10))
+
+        self._on_cam_type_change()   # set initial entry state
 
         self.recognition_running = False
         self.recognition_thread = None
         self.videoCap = None
-        
+
         # Variable to track if windows were created
         self.windows_created = False
+
+    # ---- Camera settings helpers ----
+    def _on_cam_type_change(self):
+        if self._cam_type.get() == "ip_webcam":
+            self._ip_entry.configure(state="normal")
+        else:
+            self._ip_entry.configure(state="disabled")
+
+    def _save_cam_settings(self):
+        save_settings(
+            source_type=self._cam_type.get(),
+            ip_url=self._ip_url_var.get()
+        )
+        messagebox.showinfo(
+            "Camera settings saved",
+            "Camera source updated. Changes take effect on next \"Start Recognition\".",
+            parent=self.root
+        )
 
     def on_closing(self):
         """Handle main window closing event"""
@@ -443,15 +513,33 @@ class Face_Recognition:
 
     def face_recognition_thread(self):
         try:
-            faceCascade = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
+            cascade_path = os.path.join(BASE_DIR, "haarcascade_frontalface_default.xml")
+            faceCascade = cv2.CascadeClassifier(cascade_path)
+            if faceCascade.empty():
+                raise RuntimeError(
+                    f"Could not load face detector file:\n{cascade_path}"
+                )
+
             clf = cv2.face.LBPHFaceRecognizer_create()
+            if not os.path.exists(self.model_path):
+                raise FileNotFoundError(
+                    "Trained model not found. Please go to Data Train and click \"Train Dataset\" first."
+                )
             clf.read(self.model_path)
 
-            self.videoCap = cv2.VideoCapture(0)
-            
+            cam_source = get_camera_source()   # int index or URL string
+            self.videoCap = cv2.VideoCapture(cam_source)
+            if not self.videoCap.isOpened():
+                source_label = cam_source if isinstance(cam_source, str) else f"camera index {cam_source}"
+                raise RuntimeError(
+                    f"Could not open camera ({source_label}).\n"
+                    "• For local webcam: make sure it is connected and not in use.\n"
+                    "• For IP Webcam: make sure the phone app is running and the URL is correct."
+                )
+
             # Add window close event handler using named window
             cv2.namedWindow("Face Detector")
-            
+
             # Mark that window was created
             self.windows_created = True
 
@@ -469,7 +557,10 @@ class Face_Recognition:
                     self.stop_face_recognition()
                     break
         except Exception as e:
-            print(f"Error in face recognition thread: {e}")
+            # Show error in GUI — no more silent failures
+            self.root.after(0, lambda err=str(e): messagebox.showerror(
+                "Face Recognition Error", err, parent=self.root
+            ))
         finally:
             # Clean up resources
             self.clean_up_resources()
