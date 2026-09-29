@@ -1,0 +1,5 @@
+{
+  "source_type": "ip_webcam",
+  "local_index": 0,
+  "ip_url": "http://192.168.1.2:8080/video"
+}

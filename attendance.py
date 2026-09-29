@@ -328,24 +328,21 @@ class Attendance:
         self.search_type_combo = ttk.Combobox(
             search_panel,
             textvariable=self.var_search_type,
-            values=("Select field", "Date", "Time", "Student ID", "Student Name", "Roll No", "Status"),
+            values=("Select field", "All", "Date", "Time", "Student ID", "Student Name", "Roll No", "Status"),
             state="readonly",
             width=16,
             style="Modern.TCombobox",
         )
         self.search_type_combo.grid(row=0, column=0, padx=(0, 6))
         self.search_type_combo.bind("<<ComboboxSelected>>", self.update_search_controls)
-        ttk.Entry(search_panel, textvariable=self.var_search_value,
-                  style="Modern.TEntry").grid(row=0, column=1, sticky="ew")
-        self.search_calendar_button = ttk.Button(
-            search_panel, text="\U0001F4C5", command=self.choose_search_date,
-            style="Secondary.TButton")
-        self.search_calendar_button.grid(row=0, column=2, padx=(6, 0))
-        self.search_calendar_button.grid_remove()
+        
+        self.search_entry = ttk.Entry(search_panel, textvariable=self.var_search_value, style="Modern.TEntry")
+        self.search_entry.grid(row=0, column=1, sticky="ew")
+        
         ttk.Button(search_panel, text="Search", command=self.search_records,
-                   style="Primary.TButton").grid(row=0, column=3, padx=(6, 0))
-        ttk.Button(search_panel, text="All", command=self.clear_search,
-                   style="Secondary.TButton").grid(row=0, column=4, padx=(6, 0))
+                   style="Primary.TButton").grid(row=0, column=2, padx=(6, 0))
+        ttk.Button(search_panel, text="Clear Filter", command=self.clear_filter,
+                   style="Secondary.TButton").grid(row=0, column=3, padx=(6, 0))
 
         # -------------------- Two-column workspace --------------------
         left_panel = Frame(content, bg=BG)
@@ -414,7 +411,7 @@ class Attendance:
                 field.grid_columnconfigure(0, weight=1)
                 widget = ttk.Entry(field, textvariable=variable, style="Modern.TEntry")
                 widget.grid(row=0, column=0, sticky="ew")
-                ttk.Button(field, text="\U0001F4C5", command=self.choose_date,
+                ttk.Button(field, text="\U0001F4C5", command=lambda: self.choose_date(target=variable, btn_widget=widget),
                            style="Secondary.TButton").grid(row=0, column=1, padx=(5, 0))
                 return widget
             elif variable == self.var_time:
@@ -423,7 +420,7 @@ class Attendance:
                 field.grid_columnconfigure(0, weight=1)
                 widget = ttk.Entry(field, textvariable=variable, style="Modern.TEntry")
                 widget.grid(row=0, column=0, sticky="ew")
-                ttk.Button(field, text="\U0001F552", command=self.choose_time,
+                ttk.Button(field, text="\U0001F552", command=lambda: self.choose_time(btn_widget=widget),
                            style="Secondary.TButton").grid(row=0, column=1, padx=(5, 0))
                 return widget
             else:
@@ -476,7 +473,7 @@ class Attendance:
             student_wrap, columns=("ID", "Roll", "Name"), show="headings",
             yscrollcommand=student_scroll.set, style="Modern.Treeview")
         for column, heading, width in (("ID", "Student ID", 100), ("Roll", "Roll No", 100), ("Name", "Student Name", 180)):
-            self.student_list.heading(column, text=heading, anchor="center")
+            self.student_list.heading(column, text=heading, anchor="center", command=lambda _col=column: self.sort_treeview(self.student_list, _col, False))
             self.student_list.column(column, width=width, anchor="center", stretch=True)
         self.student_list.grid(row=0, column=0, sticky="nsew")
         student_scroll.grid(row=0, column=1, sticky="ns")
@@ -500,14 +497,9 @@ class Attendance:
             fg=TEXT,
             font=("Segoe UI", 11, "bold"),
         ).grid(row=0, column=0, sticky="w")
-
-        Label(
-            csv_title,
-            text="Data loaded from CSV before database import",
-            bg=WHITE,
-            fg=MUTED,
-            font=("Segoe UI", 9),
-        ).grid(row=0, column=1, sticky="e")
+        
+        ttk.Button(csv_title, text="Import CSV", command=self.importCsv,
+                   style="Secondary.TButton").grid(row=0, column=1, sticky="e")
 
         csv_table_wrap = Frame(csv_card, bg=WHITE)
         csv_table_wrap.grid(row=1, column=0, sticky="nsew", padx=18, pady=(0, 18))
@@ -560,7 +552,7 @@ class Attendance:
         }
 
         for col in cols:
-            self.attendanceReport_left.heading(col, text=headings[col], anchor="center")
+            self.attendanceReport_left.heading(col, text=headings[col], anchor="center", command=lambda _col=col: self.sort_treeview(self.attendanceReport_left, _col, False))
             self.attendanceReport_left.column(
                 col, width=widths[col], minwidth=90, stretch=True, anchor="center",
             )
@@ -626,7 +618,7 @@ class Attendance:
         scroll_y_right.config(command=self.attendanceReport.yview)
 
         for col in cols:
-            self.attendanceReport.heading(col, text=headings[col], anchor="center")
+            self.attendanceReport.heading(col, text=headings[col], anchor="center", command=lambda _col=col: self.sort_treeview(self.attendanceReport, _col, False))
             self.attendanceReport.column(
                 col, width=widths[col], minwidth=90, stretch=True, anchor="center",
             )
@@ -637,7 +629,7 @@ class Attendance:
         db_actions = Frame(right_panel, bg=WHITE, highlightbackground=BORDER, highlightthickness=1)
         db_actions.grid(row=1, column=0, sticky="ew", pady=(12, 0))
 
-        for column in range(4):
+        for column in range(3):
             db_actions.grid_columnconfigure(column, weight=1)
 
         ttk.Button(
@@ -654,10 +646,8 @@ class Attendance:
             style="Danger.TButton",
         ).grid(row=0, column=1, sticky="ew", padx=6, pady=14)
 
-        ttk.Button(db_actions, text="Import CSV", command=self.importCsv,
-               style="Secondary.TButton").grid(row=0, column=2, sticky="ew", padx=6, pady=14)
         ttk.Button(db_actions, text="Export CSV", command=self.exportCsv,
-               style="Secondary.TButton").grid(row=0, column=3, sticky="ew", padx=(6, 18), pady=14)
+               style="Secondary.TButton").grid(row=0, column=2, sticky="ew", padx=(6, 18), pady=14)
 
         # Load current database records exactly as before.
         self.fetch_data()
@@ -681,6 +671,13 @@ class Attendance:
             cursor.close()
             conn.close()
 
+    def sort_treeview(self, tv, col, reverse):
+        items = [(tv.set(k, col), k) for k in tv.get_children('')]
+        items.sort(reverse=reverse)
+        for index, (val, k) in enumerate(items):
+            tv.move(k, '', index)
+        tv.heading(col, command=lambda _col=col: self.sort_treeview(tv, _col, not reverse))
+
     def select_student(self, event=None):
         selected = self.student_list.selection()
         if not selected:
@@ -702,18 +699,22 @@ class Attendance:
 
     def choose_search_date(self):
         self.var_search_type.set("Date")
-        self.choose_date(target=self.var_search_value, btn_widget=getattr(self, 'search_calendar_button', None))
+        self.choose_date(target=self.var_search_value, btn_widget=self.search_entry)
 
     def update_search_controls(self, event=None):
         if self.var_search_type.get() == "Date":
-            self.search_calendar_button.grid()
-        else:
-            self.search_calendar_button.grid_remove()
+            self.choose_search_date()
+        elif self.var_search_type.get() == "All":
+            self.clear_filter()
+
+    def clear_filter(self):
+        self.var_search_type.set("Select field")
+        self.var_search_value.set("")
+        self.fetch_data()
 
     def clear_search(self):
         self.var_search_type.set("Select field")
         self.var_search_value.set("")
-        self.search_calendar_button.grid_remove()
         self.fetch_data()
 
     def choose_time(self, btn_widget=None):
@@ -722,6 +723,11 @@ class Attendance:
         picker.title("Select time")
         picker.transient(self.root)
         picker.grab_set()
+        
+        if btn_widget:
+            x = btn_widget.winfo_rootx()
+            y = btn_widget.winfo_rooty() + btn_widget.winfo_height()
+            picker.geometry(f"+{x}+{y}")
         
         time_picker = SpinTimePickerModern(picker)
         time_picker.addAll(constants.HOURS24)
@@ -745,6 +751,11 @@ class Attendance:
         picker.title("Select date")
         picker.transient(self.root)
         picker.grab_set()
+        
+        if btn_widget:
+            x = btn_widget.winfo_rootx()
+            y = btn_widget.winfo_rooty() + btn_widget.winfo_height()
+            picker.geometry(f"+{x}+{y}")
         
         cal = Calendar(picker, selectmode='day', date_pattern='dd-mm-yyyy')
         cal.pack(padx=2, pady=2, fill="both", expand=True)
@@ -927,17 +938,21 @@ class Attendance:
     #==================Experot CSV=============
     def exportCsv(self):
         try:
-            if len(mydata)<1:
-                messagebox.showerror("Error","No Data Found!",parent=self.root)
+            records = self.attendanceReport.get_children()
+            if len(records) < 1:
+                messagebox.showerror("Error", "No Data Found!", parent=self.root)
                 return False
-            fln=filedialog.asksaveasfilename(initialdir=os.getcwd(),title="Open CSV",filetypes=(("CSV File","*.csv"),("All File","*.*")),parent=self.root)
-            with open(fln,mode="w",newline="") as myfile:
-                exp_write=csv.writer(myfile,delimiter=",")
-                for i in mydata:
-                    exp_write.writerow(i)
-                messagebox.showinfo("Successfuly","Export Data Successfully!",parent=self.root)
+            fln=filedialog.asksaveasfilename(initialdir=os.getcwd(),title="Save CSV", defaultextension=".csv", filetypes=(("CSV File","*.csv"),("All File","*.*")),parent=self.root)
+            if not fln:
+                return False
+            with open(fln, mode="w", newline="") as myfile:
+                exp_write = csv.writer(myfile, delimiter=",")
+                for item in records:
+                    values = self.attendanceReport.item(item, "values")
+                    exp_write.writerow(values)
+                messagebox.showinfo("Successfuly", "Export Data Successfully!", parent=self.root)
         except Exception as es:
-                messagebox.showerror("Error",f"Due to: {str(es)}",parent=self.root)    
+                messagebox.showerror("Error", f"Due to: {str(es)}", parent=self.root)    
 
     #=============Cursur Function for CSV========================
 

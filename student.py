@@ -12,6 +12,9 @@ from tkinter import messagebox
 import mysql.connector
 import cv2
 from db_config import DB_CONFIG, owner_data_dir
+from camera_config import get_camera_source
+import csv
+from tkinter import filedialog
 
 # Project paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -515,44 +518,38 @@ class Student:
             font=("Segoe UI", 9, "bold"),
         ).grid(row=0, column=0, columnspan=5, sticky="w", padx=18, pady=(14, 8))
 
+        self.var_searchTX.set("Select field")
         search_combo = ttk.Combobox(
             search_card,
             textvariable=self.var_searchTX,
-            values=("Select", "Date", "Student ID", "Name", "Roll-No", "Mobile No", "Gender", "Course", "Department"),
+            values=("Select field", "All", "Date", "Student ID", "Name", "Roll-No", "Mobile No", "Gender", "Course", "Department"),
             state="readonly",
             style="Modern.TCombobox",
             width=14,
         )
         search_combo.grid(row=1, column=0, padx=(18, 8), pady=(0, 14))
-        search_combo.current(0)
         search_combo.bind("<<ComboboxSelected>>", self.update_search_controls)
 
-        search_entry = ttk.Entry(
+        self.search_entry = ttk.Entry(
             search_card,
             textvariable=self.var_search,
             style="Modern.TEntry",
         )
-        search_entry.grid(row=1, column=1, sticky="ew", padx=8, pady=(0, 14))
-
-        self.search_date_button = ttk.Button(
-            search_card, text="\U0001F4C5", command=self.choose_search_date,
-            style="Secondary.TButton")
-        self.search_date_button.grid(row=1, column=2, padx=(0, 6), pady=(0, 14))
-        self.search_date_button.grid_remove()
+        self.search_entry.grid(row=1, column=1, sticky="ew", padx=8, pady=(0, 14))
 
         ttk.Button(
             search_card,
             text="Search",
             command=self.search_data,
             style="Primary.TButton",
-        ).grid(row=1, column=3, padx=8, pady=(0, 14))
+        ).grid(row=1, column=2, padx=8, pady=(0, 14))
 
         ttk.Button(
             search_card,
-            text="Show All",
-            command=self.fetch_data,
+            text="Clear Filter",
+            command=self.clear_filter,
             style="Secondary.TButton",
-        ).grid(row=1, column=4, padx=(8, 18), pady=(0, 14))
+        ).grid(row=1, column=3, padx=(8, 18), pady=(0, 14))
 
         table_card = create_card(right, 1, 0, padx=0, pady=0)
         table_card.grid_rowconfigure(1, weight=1)
@@ -676,37 +673,56 @@ class Student:
         }
 
         for column in columns:
-            self.student_table.heading(column, text=headings[column])
+            self.student_table.heading(column, text=headings[column], command=lambda _col=column: self.sort_treeview(self.student_table, _col, False))
             anchor_val = "center" if column == "Name" else "w"
             self.student_table.column(column, width=widths[column], minwidth=80, stretch=False, anchor=anchor_val)
 
         record_actions = Frame(right, bg=WHITE, highlightbackground=BORDER, highlightthickness=1)
         record_actions.grid(row=2, column=0, sticky="ew", pady=(12, 0))
-        record_actions.grid_columnconfigure(0, weight=1)
-        record_actions.grid_columnconfigure(1, weight=1)
+        for col in range(4):
+            record_actions.grid_columnconfigure(col, weight=1)
+            
         ttk.Button(record_actions, text="Update Record", command=self.update_data,
                    style="Primary.TButton").grid(row=0, column=0, sticky="ew", padx=(18, 6), pady=14)
         ttk.Button(record_actions, text="Delete Record", command=self.delete_data,
-                   style="Danger.TButton").grid(row=0, column=1, sticky="ew", padx=(6, 18), pady=14)
+                   style="Danger.TButton").grid(row=0, column=1, sticky="ew", padx=6, pady=14)
+        ttk.Button(record_actions, text="Import CSV", command=self.import_csv,
+                   style="Secondary.TButton").grid(row=0, column=2, sticky="ew", padx=6, pady=14)
+        ttk.Button(record_actions, text="Export CSV", command=self.export_csv,
+                   style="Secondary.TButton").grid(row=0, column=3, sticky="ew", padx=(6, 18), pady=14)
 
         # Load existing records exactly as before
         self.fetch_data()
 
     def go_back(self):
         self.root.destroy()
+        
+    def clear_filter(self):
+        self.var_searchTX.set("Select field")
+        self.var_search.set("")
+        self.fetch_data()
+
+    def sort_treeview(self, tv, col, reverse):
+        items = [(tv.set(k, col), k) for k in tv.get_children('')]
+        items.sort(reverse=reverse)
+        for index, (val, k) in enumerate(items):
+            tv.move(k, '', index)
+        tv.heading(col, command=lambda _col=col: self.sort_treeview(tv, _col, not reverse))
+
     def choose_birth_date(self):
         self._choose_date(self.var_dob, "Select date of birth", getattr(self, 'dob_button', None))
 
     def choose_search_date(self):
         self.var_searchTX.set("Date")
-        self.update_search_controls()
-        self._choose_date(self.var_search, "Select search date", getattr(self, 'search_date_button', None))
+        self._choose_date(self.var_search, "Select search date", getattr(self, 'search_entry', None))
 
     def update_search_controls(self, event=None):
         if self.var_searchTX.get() == "Date":
-            self.search_date_button.grid()
-        else:
-            self.search_date_button.grid_remove()
+            self.choose_search_date()
+        elif self.var_searchTX.get() == "All":
+            self.var_searchTX.set("Select field")
+            self.var_search.set("")
+            self.fetch_data()
 
     def _choose_date(self, target, title, btn_widget=None):
         from tkcalendar import Calendar
@@ -714,6 +730,11 @@ class Student:
         picker.title(title)
         picker.transient(self.root)
         picker.grab_set()
+        
+        if btn_widget:
+            x = btn_widget.winfo_rootx()
+            y = btn_widget.winfo_rooty() + btn_widget.winfo_height()
+            picker.geometry(f"+{x}+{y}")
         
         cal = Calendar(picker, selectmode='day', date_pattern='dd-mm-yyyy')
         cal.pack(padx=2, pady=2, fill="both", expand=True)
@@ -726,6 +747,51 @@ class Student:
         btn_frame.pack(fill="x", pady=2)
         ttk.Button(btn_frame, text="Select", command=select_day, style="Primary.TButton").pack(side="left", expand=True, padx=2)
         ttk.Button(btn_frame, text="Cancel", command=picker.destroy, style="Secondary.TButton").pack(side="right", expand=True, padx=2)
+
+    def export_csv(self):
+        try:
+            records = self.student_table.get_children()
+            if len(records) < 1:
+                messagebox.showerror("Error", "No Data Found!", parent=self.root)
+                return
+            fln = filedialog.asksaveasfilename(initialdir=os.getcwd(), title="Save CSV", defaultextension=".csv", filetypes=(("CSV File", "*.csv"), ("All File", "*.*")), parent=self.root)
+            if not fln:
+                return
+            with open(fln, mode="w", newline="") as myfile:
+                exp_write = csv.writer(myfile, delimiter=",")
+                for item in records:
+                    values = self.student_table.item(item, "values")
+                    exp_write.writerow(values)
+                messagebox.showinfo("Successfuly", "Export Data Successfully!", parent=self.root)
+        except Exception as es:
+            messagebox.showerror("Error", f"Due to: {str(es)}", parent=self.root)
+
+    def import_csv(self):
+        try:
+            fln = filedialog.askopenfilename(initialdir=os.getcwd(), title="Open CSV", filetypes=(("CSV File", "*.csv"), ("All File", "*.*")), parent=self.root)
+            if not fln:
+                return
+            with open(fln, mode="r") as myfile:
+                csvread = csv.reader(myfile, delimiter=",")
+                conn = mysql.connector.connect(**DB_CONFIG)
+                mycursor = conn.cursor()
+                count = 0
+                for row in csvread:
+                    if len(row) < 15:
+                        continue 
+                    uid, uname, udep, ucourse, uyear, usem, udiv, ugender, udob, umob, uaddress, uroll, uemail, uteacher, uphoto = row[:15]
+                    
+                    mycursor.execute("SELECT COUNT(*) FROM student WHERE Student_ID=%s AND Owner_Email=%s", (uid, self.owner_email))
+                    if mycursor.fetchone()[0] == 0:
+                        qury = "INSERT INTO student(Student_ID,Name,Department,Course,Year,Semester,Division,Gender,DOB,Mobile_No,Address,Roll_No,Email,Teacher_Name,PhotoSample,Owner_Email) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+                        mycursor.execute(qury,(uid, uname, udep, ucourse, uyear, usem, udiv, ugender, udob, umob, uaddress, uroll, uemail, uteacher, uphoto, self.owner_email))
+                        count += 1
+                conn.commit()
+                self.fetch_data()
+                conn.close()
+                messagebox.showinfo("Success", f"Successfully imported {count} new student records!", parent=self.root)
+        except Exception as es:
+            messagebox.showerror("Error", f"Due to: {str(es)}", parent=self.root)
 
 
 # ==================Function Decleration==============================
@@ -962,7 +1028,7 @@ class Student:
         )
         if detector.empty():
             raise RuntimeError("Face detector file could not be loaded.")
-        camera = cv2.VideoCapture(0)
+        camera = cv2.VideoCapture(get_camera_source())
         if not camera.isOpened():
             raise RuntimeError("Camera could not be opened.")
 

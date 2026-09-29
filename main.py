@@ -6,8 +6,9 @@ from face_recognition import Face_Recognition
 from attendance import Attendance
 from developer import Developer
 from helpsupport import Helpsupport
-from db_config import ensure_owner_columns
+from db_config import ensure_owner_columns, DB_CONFIG
 import os
+from datetime import datetime
 from ui.theme import COLORS, apply_theme, FONTS
 from ui.components import *
 from ui.icons import ICONS
@@ -102,7 +103,7 @@ class Face_Recognition_System:
         style.configure("MainDanger.TButton",
             background=WHITE, foreground=RED, relief="flat",
             borderwidth=1, bordercolor="#FECACA", focusthickness=0,
-            padding=(10, 8), font=("Segoe UI", 9, "bold"))
+            padding=(12, 10), font=("Segoe UI", 9, "bold"))
         style.map("MainDanger.TButton",
             background=[("active", RED_SOFT)],
             foreground=[("active", "#B91C1C")],
@@ -118,8 +119,8 @@ class Face_Recognition_System:
         # ====================================================
         # Sidebar
         # ====================================================
-        SIDEBAR_FULL = 224
-        SIDEBAR_MINI = 58
+        SIDEBAR_FULL = 264
+        SIDEBAR_MINI = 64
         self._sidebar_expanded = True
         sidebar = Frame(self.root, bg=NAVY, width=SIDEBAR_FULL)
         sidebar.grid(row=0, column=0, sticky="nsw")
@@ -127,7 +128,7 @@ class Face_Recognition_System:
 
         # Toggle button at the top of sidebar
         toggle_row = Frame(sidebar, bg=NAVY)
-        toggle_row.pack(fill=X, padx=8, pady=(12, 0))
+        toggle_row.pack(fill=X, padx=14, pady=(16, 0))
 
         def toggle_sidebar():
             if self._sidebar_expanded:
@@ -139,9 +140,9 @@ class Face_Recognition_System:
             else:
                 sidebar.configure(width=SIDEBAR_FULL)
                 for icon_lbl, text_lbl in self._sidebar_label_pairs:
-                    text_lbl.pack(side=LEFT, padx=(10, 0))
+                    text_lbl.pack(side=LEFT, padx=(14, 0))
                 toggle_btn.configure(text="✕")
-                brand_label.pack(side=LEFT, padx=(10, 0))
+                brand_label.pack(side=LEFT, padx=(14, 0))
             self._sidebar_expanded = not self._sidebar_expanded
 
         toggle_btn = Label(toggle_row, text="✕", bg=NAVY, fg=WHITE,
@@ -151,7 +152,7 @@ class Face_Recognition_System:
         toggle_btn.bind("<Button-1>", lambda e: toggle_sidebar())
 
         brand_row = Frame(sidebar, bg=NAVY)
-        brand_row.pack(fill=X, padx=12, pady=(10, 20))
+        brand_row.pack(fill=X, padx=18, pady=(14, 26))
 
         try:
             from PIL import Image, ImageTk
@@ -167,8 +168,8 @@ class Face_Recognition_System:
         mark.pack(side=LEFT)
 
         brand_label = Label(brand_row, text="Attendance\nSystem", bg=NAVY, fg=WHITE,
-              font=("Segoe UI", 11, "bold"), justify=LEFT)
-        brand_label.pack(side=LEFT, padx=(12, 0))
+              font=("Segoe UI", 12, "bold"), justify=LEFT)
+        brand_label.pack(side=LEFT, padx=(14, 0))
 
         nav_items = [
             ("\U0001F3E0", "Home", None),
@@ -190,19 +191,19 @@ class Face_Recognition_System:
         for icon, label, cmd in nav_items:
             active_bg = NAVY_ACTIVE if label == "Home" else NAVY
             row = Frame(nav_wrap, bg=active_bg, cursor="hand2")
-            row.pack(fill=X, padx=8, pady=2)
+            row.pack(fill=X, padx=12, pady=3)
 
             inner = Frame(row, bg=active_bg)
-            inner.pack(fill=X, padx=8, pady=9)
+            inner.pack(fill=X, padx=14, pady=12)
 
             icon_lbl = Label(inner, text=icon, bg=active_bg, fg=WHITE,
-                  font=("Segoe UI", 11))
+                  font=("Segoe UI", 12))
             icon_lbl.pack(side=LEFT)
             text_lbl = Label(inner, text=label, bg=active_bg,
                   fg=WHITE if label == "Home" else "#CBD5F5",
                   font=("Segoe UI", 10, "bold" if label == "Home" else "normal")
                   )
-            text_lbl.pack(side=LEFT, padx=(12, 0))
+            text_lbl.pack(side=LEFT, padx=(14, 0))
             self._sidebar_labels.append(text_lbl)
             self._sidebar_label_pairs.append((icon_lbl, text_lbl))
 
@@ -229,13 +230,13 @@ class Face_Recognition_System:
                 row.bind("<Leave>", on_leave)
 
         sidebar_footer = Frame(sidebar, bg=NAVY)
-        sidebar_footer.pack(side=BOTTOM, fill=X, padx=20, pady=22)
+        sidebar_footer.pack(side=BOTTOM, fill=X, padx=22, pady=28)
 
-        Frame(sidebar_footer, bg=NAVY_ACTIVE, height=1).pack(fill=X, pady=(0, 14))
+        Frame(sidebar_footer, bg=NAVY_ACTIVE, height=1).pack(fill=X, pady=(0, 16))
 
         Label(sidebar_footer, text="Better Security\nSmarter Attendance",
               bg=NAVY, fg="#8FA3D6", font=("Segoe UI", 9, "bold"),
-              justify=LEFT).pack(anchor="w", pady=(0, 12))
+              justify=LEFT).pack(anchor="w", pady=(0, 14))
 
         ttk.Button(sidebar_footer, text="\u23FB  Exit", style="MainDanger.TButton",
                    command=self.Close).pack(fill=X)
@@ -305,9 +306,9 @@ class Face_Recognition_System:
         body.grid(row=1, column=0, sticky="nsew", padx=22, pady=20)
         body.grid_columnconfigure(0, weight=3)
         body.grid_columnconfigure(1, weight=1)
-        body.grid_rowconfigure(1, weight=1)
+        body.grid_rowconfigure(2, weight=1)
 
-        # ---- top row: banner + total modules (col 0) ----
+        # ---- top row: banner + total students (col 0) ----
         top_row = Frame(body, bg=BG)
         top_row.grid(row=0, column=0, sticky="ew", pady=(0, 14))
         top_row.grid_columnconfigure(0, weight=3)
@@ -323,10 +324,13 @@ class Face_Recognition_System:
         Label(banner_inner, text="Welcome back,", bg=BLUE_SOFT, fg=BLUE_DARK,
               font=("Segoe UI", 22, "bold")).pack(anchor="w")
         Label(banner_inner,
-              text="Choose a module to manage students, training,\nrecognition and attendance.",
+              text="Use the sidebar to manage students, training,\nrecognition and attendance.",
               bg=BLUE_SOFT, fg=MUTED, font=("Segoe UI", 10), justify=LEFT
               ).pack(anchor="w", pady=(8, 14))
         Frame(banner_inner, bg=BLUE, width=90, height=4).pack(anchor="w")
+
+        # Live counts for this account
+        total_students, present_today = self._get_dashboard_stats()
 
         total_card = Frame(top_row, bg=WHITE, highlightbackground=BORDER, highlightthickness=1)
         total_card.grid(row=0, column=1, sticky="nsew")
@@ -339,94 +343,64 @@ class Face_Recognition_System:
         Label(tc_icon, text="\U0001F465", bg=BLUE_SOFT, fg=BLUE,
               font=("Segoe UI", 14)).pack(expand=True)
 
-        Label(total_inner, text="Total Modules", bg=WHITE, fg=MUTED,
+        Label(total_inner, text="Total Students", bg=WHITE, fg=MUTED,
               font=("Segoe UI", 9)).pack(anchor="w", pady=(14, 0))
-        Label(total_inner, text="7", bg=WHITE, fg=BLUE_DARK,
+        Label(total_inner, text=str(total_students), bg=WHITE, fg=BLUE_DARK,
               font=("Segoe UI", 26, "bold")).pack(anchor="w")
         Frame(total_inner, bg=PURPLE, width=40, height=3).pack(anchor="w", pady=(6, 0))
 
-        # ---- Quick Access panel (col 1, row 0) ----
+        # ---- Quick Actions panel (col 1, row 0) ----
         quick_panel = Frame(body, bg=WHITE, highlightbackground=BORDER, highlightthickness=1)
         quick_panel.grid(row=0, column=1, sticky="nsew", padx=(14, 0), pady=(0, 14))
         quick_inner = Frame(quick_panel, bg=WHITE)
         quick_inner.pack(fill=BOTH, expand=True, padx=18, pady=16)
 
         qtitle = Frame(quick_inner, bg=WHITE)
-        qtitle.pack(fill=X, pady=(0, 10))
+        qtitle.pack(fill=X, pady=(0, 14))
         Label(qtitle, text="\u26A1", bg=WHITE, fg=ORANGE,
               font=("Segoe UI", 11)).pack(side=LEFT)
-        Label(qtitle, text="Quick Access", bg=WHITE, fg=TEXT,
+        Label(qtitle, text="Quick Actions", bg=WHITE, fg=TEXT,
               font=("Segoe UI", 11, "bold")).pack(side=LEFT, padx=(8, 0))
 
-        quick_items = [
-            ("\U0001F464", "Add New Student", self.student_pannels),
-            ("\U0001F4C5", "Mark Attendance", self.attendance_pannel),
-            ("\U0001F5C4", "Train Model", self.train_pannels),
-            ("\U0001F4CA", "View Reports", self.attendance_pannel),
+        # Task-level shortcuts only — each calls the same handler as its
+        # sidebar entry, so there is exactly one code path per feature.
+        quick_actions = [
+            ("\U0001F464", "Add new student", self.student_pannels, BLUE, BLUE_SOFT),
+            ("\U0001F4F7", "Start recognition", self.face_rec, PINK, PINK_SOFT),
+            ("\U0001F5C4", "Retrain model", self.train_pannels, ORANGE, ORANGE_SOFT),
         ]
 
-        for icon, label, cmd in quick_items:
-            qrow = Frame(quick_inner, bg=WHITE, cursor="hand2")
-            qrow.pack(fill=X, pady=6)
-            Label(qrow, text=icon, bg=WHITE, fg=MUTED,
-                  font=("Segoe UI", 10)).pack(side=LEFT)
-            Label(qrow, text=label, bg=WHITE, fg=TEXT,
-                  font=("Segoe UI", 9, "bold")).pack(side=LEFT, padx=(10, 0))
-            Label(qrow, text="\u203A", bg=WHITE, fg=MUTED,
-                  font=("Segoe UI", 11, "bold")).pack(side=RIGHT)
+        for icon, title, cmd, accent, accent_soft in quick_actions:
+            self._quick_action_tile(quick_inner, icon, title, cmd, accent, accent_soft).pack(
+                fill=X, pady=6)
 
-            def bind_click(widget, callback):
-                widget.bind("<Button-1>", lambda e: callback())
-                for child in widget.winfo_children():
-                    bind_click(child, callback)
-            bind_click(qrow, cmd)
-
-        # ---- Module cards grid (col 0, row 1) ----
-        modules_wrap = Frame(body, bg=BG)
-        modules_wrap.grid(row=1, column=0, sticky="nsew")
-        modules_wrap.grid_rowconfigure(0, weight=1)
-        modules_wrap.grid_rowconfigure(1, weight=1)
+        # ---- Stats strip (full width, row 1) ----
+        stats_strip = Frame(body, bg=BG)
+        stats_strip.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 14))
         for c in range(3):
-            modules_wrap.grid_columnconfigure(c, weight=1, uniform="mrow0")
+            stats_strip.grid_columnconfigure(c, weight=1, uniform="stats")
 
-        wide_modules = [
-            ("\U0001F393", "Students", "Manage student profiles\nand information.",
-             self.student_pannels, BLUE, BLUE_SOFT, "\u2192"),
-            ("\U0001F4F7", "Face Recognition", "Train and recognize\nstudent faces.",
-             self.face_rec, PINK, PINK_SOFT, "\u2192"),
-            ("\U0001F4C5", "Attendance", "View, update and manage\nattendance records.",
-             self.attendance_pannel, GREEN, "#E7F9F1", "\u2192"),
+        present_label = f"{present_today} / {total_students}" if total_students else "0 / 0"
+        attendance_rate = (
+            f"{round((present_today / total_students) * 100)}%" if total_students else "0%"
+        )
+        stat_tiles = [
+            ("\U0001F4C5", "Present today", present_label, GREEN, "#E7F9F1"),
+            ("\U0001F4CA", "Attendance rate", attendance_rate, BLUE, BLUE_SOFT),
+            ("\U0001F5C4", "Model status", "Trained", PURPLE, PURPLE_SOFT),
         ]
+        for col, (icon, label, value, accent, accent_soft) in enumerate(stat_tiles):
+            self._stat_tile(stats_strip, icon, label, value, accent, accent_soft).grid(
+                row=0, column=col, sticky="nsew",
+                padx=(0 if col == 0 else 8, 8 if col < 2 else 0))
 
-        for col, (icon, title, desc, cmd, accent, accent_soft, arrow) in enumerate(wide_modules):
-            self._make_card(modules_wrap, 0, col, icon, title, desc, cmd,
-                             accent, accent_soft, arrow=arrow, big=True,
-                             padx=(0 if col == 0 else 8, 8 if col < 2 else 0))
+        # ---- Recent activity (col 0, row 2) ----
+        activity_panel = self._build_recent_activity(body)
+        activity_panel.grid(row=2, column=0, sticky="nsew")
 
-        small_row = Frame(modules_wrap, bg=BG)
-        small_row.grid(row=1, column=0, columnspan=3, sticky="nsew", pady=(14, 0))
-        for c in range(4):
-            small_row.grid_columnconfigure(c, weight=1, uniform="mrow1")
-
-        small_modules = [
-            ("\U0001F464", "Student Panel", "Create and manage\nstudent profiles.",
-             self.student_pannels, PURPLE, PURPLE_SOFT),
-            ("\U0001F5C4", "Data Train", "Train the face-\nrecognition model.",
-             self.train_pannels, ORANGE, ORANGE_SOFT),
-            ("</>", "Developers", "Project and developer\ninformation.",
-             self.developr, TEAL, TEAL_SOFT),
-            ("\U0001F3A7", "Help & Support", "Support, guides\nand resources.",
-             self.helpSupport, PINK, PINK_SOFT),
-        ]
-
-        for col, (icon, title, desc, cmd, accent, accent_soft) in enumerate(small_modules):
-            self._make_card(small_row, 0, col, icon, title, desc, cmd,
-                             accent, accent_soft, arrow="\u2192", big=False,
-                             padx=(0 if col == 0 else 8, 8 if col < 3 else 0))
-
-        # ---- System Status panel (col 1, row 1) ----
+        # ---- System Status panel (col 1, row 2) ----
         status_panel = Frame(body, bg=WHITE, highlightbackground=BORDER, highlightthickness=1)
-        status_panel.grid(row=1, column=1, sticky="new", padx=(14, 0))
+        status_panel.grid(row=2, column=1, sticky="new", padx=(14, 0))
         status_inner = Frame(status_panel, bg=WHITE)
         status_inner.pack(fill=BOTH, expand=True, padx=18, pady=16)
 
@@ -461,7 +435,7 @@ class Face_Recognition_System:
 
         # ---- Bottom banner ----
         bottom_banner = Frame(body, bg=NAVY)
-        bottom_banner.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(16, 0))
+        bottom_banner.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(16, 0))
         bb_inner = Frame(bottom_banner, bg=NAVY)
         bb_inner.pack(fill=X, padx=26, pady=18)
 
@@ -471,57 +445,162 @@ class Face_Recognition_System:
               bg=NAVY, fg="#B7C3E6", font=("Segoe UI", 9)).pack(anchor="w", pady=(4, 0))
 
     # ========================================================
-    # Card builder helper (visual only)
+    # Dashboard tile builders (visual only)
     # ========================================================
-    def _make_card(self, parent, row, col, icon, title, desc, command,
-                    accent, accent_soft, arrow="\u2192", big=False, padx=(0, 0)):
+    def _stat_tile(self, parent, icon, label, value, accent, accent_soft):
         WHITE = self.C_WHITE
         TEXT = self.C_TEXT
         MUTED = self.C_MUTED
         BORDER = self.C_BORDER
 
-        card = Frame(parent, bg=WHITE, highlightbackground=BORDER,
+        tile = Frame(parent, bg=WHITE, highlightbackground=BORDER, highlightthickness=1)
+        inner = Frame(tile, bg=WHITE)
+        inner.pack(fill=BOTH, expand=True, padx=16, pady=14)
+
+        icon_box = Frame(inner, bg=accent_soft, width=36, height=36)
+        icon_box.pack(anchor="w")
+        icon_box.pack_propagate(False)
+        Label(icon_box, text=icon, bg=accent_soft, fg=accent,
+              font=("Segoe UI", 12)).pack(expand=True)
+
+        Label(inner, text=label, bg=WHITE, fg=MUTED,
+              font=("Segoe UI", 9)).pack(anchor="w", pady=(10, 0))
+        Label(inner, text=value, bg=WHITE, fg=TEXT,
+              font=("Segoe UI", 17, "bold")).pack(anchor="w")
+        return tile
+
+    def _quick_action_tile(self, parent, icon, title, command, accent, accent_soft):
+        WHITE = self.C_WHITE
+        TEXT = self.C_TEXT
+        BORDER = self.C_BORDER
+
+        tile = Frame(parent, bg=WHITE, highlightbackground=BORDER,
                      highlightthickness=1, cursor="hand2")
-        card.grid(row=row, column=col, sticky="nsew", padx=padx,
-                  pady=(0, 0) if big else (0, 0))
-        card.grid_columnconfigure(0, weight=1)
+        inner = Frame(tile, bg=WHITE)
+        inner.pack(fill=BOTH, expand=True, padx=14, pady=12)
 
-        pad = 22 if big else 16
-        inner = Frame(card, bg=WHITE)
-        inner.pack(fill=BOTH, expand=True, padx=pad, pady=pad)
+        row = Frame(inner, bg=WHITE)
+        row.pack(fill=X)
 
-        top = Frame(inner, bg=WHITE)
-        top.pack(fill=X)
-
-        icon_size = 56 if big else 46
-        icon_box = Frame(top, bg=accent_soft, width=icon_size, height=icon_size)
+        icon_box = Frame(row, bg=accent_soft, width=34, height=34)
         icon_box.pack(side=LEFT)
         icon_box.pack_propagate(False)
         Label(icon_box, text=icon, bg=accent_soft, fg=accent,
-              font=("Segoe UI", 16 if big else 13)).pack(expand=True)
+              font=("Segoe UI", 12)).pack(expand=True)
 
-        if big:
-            arrow_box = Frame(top, bg=accent, width=32, height=32)
-            arrow_box.pack(side=RIGHT)
-            arrow_box.pack_propagate(False)
-            Label(arrow_box, text=arrow, bg=accent, fg=WHITE,
-                  font=("Segoe UI", 11, "bold")).pack(expand=True)
-
-        Label(inner, text=title, bg=WHITE, fg=TEXT,
-              font=("Segoe UI", 13 if big else 11, "bold"),
-              anchor="w").pack(fill=X, pady=(16 if big else 12, 4), anchor="w")
-
-        Label(inner, text=desc, bg=WHITE, fg=MUTED,
-              font=("Segoe UI", 9 if big else 8), justify=LEFT,
-              anchor="nw").pack(fill=X, anchor="w")
+        Label(row, text=title, bg=WHITE, fg=TEXT,
+              font=("Segoe UI", 10, "bold")).pack(side=LEFT, padx=(12, 0))
+        Label(row, text="\u203A", bg=WHITE, fg=self.C_MUTED,
+              font=("Segoe UI", 11, "bold")).pack(side=RIGHT)
 
         def bind_click(widget, callback):
             widget.bind("<Button-1>", lambda e: callback())
             for child in widget.winfo_children():
                 bind_click(child, callback)
-        bind_click(card, command)
+        bind_click(tile, command)
 
-        return card
+        return tile
+
+    def _build_recent_activity(self, parent):
+        WHITE = self.C_WHITE
+        TEXT = self.C_TEXT
+        MUTED = self.C_MUTED
+        BORDER = self.C_BORDER
+        GREEN = COLORS["success"]
+        RED = COLORS["danger"]
+
+        panel = Frame(parent, bg=WHITE, highlightbackground=BORDER, highlightthickness=1)
+        inner = Frame(panel, bg=WHITE)
+        inner.pack(fill=BOTH, expand=True, padx=20, pady=18)
+
+        title_row = Frame(inner, bg=WHITE)
+        title_row.pack(fill=X, pady=(0, 12))
+        Label(title_row, text="Recent activity", bg=WHITE, fg=TEXT,
+              font=("Segoe UI", 12, "bold")).pack(side=LEFT)
+
+        view_all = Label(title_row, text="View all \u203A", bg=WHITE, fg=self.C_NAVY,
+                          font=("Segoe UI", 9, "bold"), cursor="hand2")
+        view_all.pack(side=RIGHT)
+        view_all.bind("<Button-1>", lambda e: self.attendance_pannel())
+
+        rows = self._get_recent_activity(limit=6)
+        if not rows:
+            Label(inner, text="No attendance recorded yet.", bg=WHITE, fg=MUTED,
+                  font=("Segoe UI", 9)).pack(anchor="w", pady=8)
+        else:
+            for name, roll_no, std_time, std_date, status in rows:
+                row = Frame(inner, bg=WHITE)
+                row.pack(fill=X, pady=6)
+
+                is_present = (status or "").strip().lower() == "present"
+                dot = Frame(row, bg=GREEN if is_present else RED, width=8, height=8)
+                dot.pack(side=LEFT, pady=4)
+
+                text_col = Frame(row, bg=WHITE)
+                text_col.pack(side=LEFT, padx=(10, 0), anchor="w")
+                Label(text_col, text=f"{name}  \u00b7  Roll {roll_no}", bg=WHITE, fg=TEXT,
+                      font=("Segoe UI", 9, "bold")).pack(anchor="w")
+                Label(text_col, text=f"{status}  \u2022  {std_date} {std_time}",
+                      bg=WHITE, fg=MUTED, font=("Segoe UI", 8)).pack(anchor="w")
+
+        return panel
+
+    # ========================================================
+    # Dashboard data (live, scoped to the signed-in owner)
+    # ========================================================
+    def _get_dashboard_stats(self):
+        """Return (total_students, present_today) for the signed-in owner."""
+        total_students = 0
+        present_today = 0
+        today_dash = datetime.now().strftime("%d-%m-%Y")
+        today_slash = datetime.now().strftime("%d/%m/%Y")
+        try:
+            conn = mysql.connector.connect(**DB_CONFIG)
+            cur = conn.cursor()
+
+            cur.execute(
+                "SELECT COUNT(*) FROM student WHERE Owner_Email=%s",
+                (self.user_email,),
+            )
+            row = cur.fetchone()
+            total_students = row[0] if row else 0
+
+            cur.execute(
+                "SELECT COUNT(*) FROM stdattendance "
+                "WHERE Owner_Email=%s AND std_attendance='Present' "
+                "AND std_date IN (%s, %s)",
+                (self.user_email, today_dash, today_slash),
+            )
+            row = cur.fetchone()
+            present_today = row[0] if row else 0
+
+            cur.close()
+            conn.close()
+        except Exception:
+            pass
+        return total_students, present_today
+
+    def _get_recent_activity(self, limit=6):
+        """Return the most recent attendance rows for the signed-in owner,
+        newest first. std_date is stored as text in mixed '-'/'/' formats,
+        so it is normalized before sorting rather than sorted as-is."""
+        rows = []
+        try:
+            conn = mysql.connector.connect(**DB_CONFIG)
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT std_name, std_roll_no, std_time, std_date, std_attendance "
+                "FROM stdattendance WHERE Owner_Email=%s "
+                "ORDER BY STR_TO_DATE(REPLACE(std_date, '/', '-'), '%%d-%%m-%%Y') DESC, "
+                "std_time DESC LIMIT %s",
+                (self.user_email, limit),
+            )
+            rows = cur.fetchall()
+            cur.close()
+            conn.close()
+        except Exception:
+            rows = []
+        return rows
 
        # ========================================================
     # Existing navigation functions — functionality preserved
